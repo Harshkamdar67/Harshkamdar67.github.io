@@ -1,4 +1,4 @@
-# 100 — A Creative HTML Showcase
+# Indus Test 100 HTML
 
 One hundred standalone, self-contained HTML experiments in motion, light and mathematics.
 Every piece is a **single `.html` file** — open it, read it, ship it. No build step, no dependencies to install.
