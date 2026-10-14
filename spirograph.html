@@ -1,0 +1,111 @@
+<!-- Spirograph — a hypotrochoid pen tracing layered rosettes onto a luminous field -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Spirograph</title>
+<style>
+  html,body{margin:0;height:100%;background:#06040f;overflow:hidden;}
+  canvas#c{display:block;width:100vw;height:100vh;}
+  .badge{position:fixed;left:14px;bottom:14px;z-index:5;
+    font:12px/1.4 ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;
+    color:rgba(255,255,255,.6);background:rgba(10,6,22,.42);backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+    border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:7px 13px;letter-spacing:.03em;}
+  .badge a{color:rgba(255,255,255,.86);text-decoration:none;border-bottom:1px solid rgba(255,255,255,.28);}
+  .badge a:hover{color:#fff;}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="badge">Spirograph &nbsp;&middot;&nbsp; <a href="index.html">&larr; Gallery</a></div>
+<script>
+(function(){
+'use strict';
+var cv=document.getElementById('c');
+var ctx=cv.getContext('2d',{alpha:false});
+var DPR=Math.min(window.devicePixelRatio||1,2);
+var W=0,H=0;
+function resize(){
+  W=Math.max(1,Math.floor(window.innerWidth*DPR));
+  H=Math.max(1,Math.floor(window.innerHeight*DPR));
+  cv.width=W; cv.height=H;
+  cv.style.width=window.innerWidth+'px'; cv.style.height=window.innerHeight+'px';
+  ctx.globalCompositeOperation='source-over';
+  ctx.fillStyle='#06040f'; ctx.fillRect(0,0,W,H);
+}
+window.addEventListener('resize',resize);
+resize();
+
+var mx=0.5,my=0.5;
+window.addEventListener('pointermove',function(e){ mx=e.clientX/window.innerWidth; my=e.clientY/window.innerHeight; });
+window.addEventListener('touchmove',function(e){ if(e.touches[0]){mx=e.touches[0].clientX/window.innerWidth;my=e.touches[0].clientY/window.innerHeight;} },{passive:true});
+
+var R=1.0;
+var th=0, THMAX=Math.PI*2*9, hue=205, curves=0;
+var t=0,last=0;
+
+function pt(th,r,d,rot,scale){
+  var ratio=(R-r)/r;
+  var px=(R-r)*Math.cos(th)+d*Math.cos(ratio*th);
+  var py=(R-r)*Math.sin(th)-d*Math.sin(ratio*th);
+  var cr=Math.cos(rot), sr=Math.sin(rot);
+  var X=px*cr-py*sr, Y=px*sr+py*cr;
+  return [W*0.5+X*scale, H*0.5+Y*scale];
+}
+
+function frame(now){
+  if(!last) last=now;
+  var dt=Math.min(0.05,(now-last)/1000); last=now;
+  t+=dt;
+
+  var r=0.30+0.11*Math.sin(t*0.031)+(mx-0.5)*0.16;
+  var d=0.60+0.26*Math.sin(t*0.047+1.1)+(my-0.5)*0.5;
+  if(r<0.13) r=0.13; if(r>0.60) r=0.60;
+  if(d<0.15) d=0.15; if(d>1.30) d=1.30;
+
+  var rot=t*0.05;
+  var scale=Math.min(W,H)*0.37;
+  var dth=THMAX/(3.6*60), sub=14, ds=dth/sub;
+
+  ctx.globalCompositeOperation='lighter';
+  ctx.lineJoin='round'; ctx.lineCap='round';
+
+  var p=pt(th,r,d,rot,scale);
+  ctx.beginPath();
+  ctx.moveTo(p[0],p[1]);
+  for(var i=0;i<sub;i++){
+    th+=ds;
+    p=pt(th,r,d,rot,scale);
+    ctx.lineTo(p[0],p[1]);
+  }
+  ctx.strokeStyle='hsla('+hue+',100%,64%,0.26)';
+  ctx.lineWidth=1.35;
+  ctx.stroke();
+
+  /* pen glow */
+  var pg=ctx.createRadialGradient(p[0],p[1],0,p[0],p[1],13);
+  pg.addColorStop(0,'rgba(255,255,255,0.85)');
+  pg.addColorStop(0.4,'hsla('+hue+',100%,72%,0.45)');
+  pg.addColorStop(1,'hsla('+hue+',100%,70%,0)');
+  ctx.fillStyle=pg;
+  ctx.beginPath(); ctx.arc(p[0],p[1],13,0,6.28318); ctx.fill();
+
+  if(th>=THMAX){
+    th=0; hue=(hue+47)%360; curves++;
+    if(curves%5===0){        /* gentle reset so the field never saturates */
+      ctx.globalCompositeOperation='source-over';
+      ctx.fillStyle='rgba(6,4,15,0.38)';
+      ctx.fillRect(0,0,W,H);
+    }
+  }
+  ctx.globalCompositeOperation='source-over';
+
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,152 @@
+<!-- CONCEPT: Grid Distortion Field — a lattice of spring-coupled points that ripples and displaces away from the cursor -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Grid Distortion Field</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;background:#07100e}
+  canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;cursor:crosshair}
+  #badge{position:fixed;left:16px;bottom:14px;z-index:10;font-family:'JetBrains Mono',monospace;
+    font-size:10px;letter-spacing:.14em;color:rgba(140,230,200,.55);text-transform:uppercase;
+    display:flex;gap:10px;align-items:center}
+  #badge a{color:rgba(140,230,200,.55);text-decoration:none;border-bottom:1px solid rgba(140,230,200,.22)}
+  #badge a:hover{color:#6effc8}
+  #badge .dot{width:4px;height:4px;border-radius:50%;background:#2effb0;box-shadow:0 0 8px #2effb0}
+  #tip{position:fixed;top:22px;left:28px;font-family:'Inter',sans-serif;font-weight:600;
+    font-size:13px;letter-spacing:.02em;color:rgba(160,240,215,.85)}
+  #sub{position:fixed;top:42px;left:28px;font-family:'JetBrains Mono',monospace;font-size:10px;
+    letter-spacing:.12em;color:rgba(140,230,200,.42);text-transform:uppercase}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="tip">Grid Distortion Field</div>
+<div id="sub">spring-coupled lattice &middot; move to disturb &middot; click to pulse</div>
+<div id="badge"><span class="dot"></span><span>Grid Distortion</span><span>&middot;</span><a href="index.html">&larr; Gallery</a></div>
+<script>
+(()=>{
+  const cvs=document.getElementById('c'),ctx=cvs.getContext('2d');
+  let W,H,DPR;
+  let cols,rows,spacing;
+  let pts=[];              // {hx,hy,x,y,vx,vy}
+  const mouse={x:-9999,y:-9999,active:false};
+  const pulses=[];         // click shockwaves {x,y,t}
+
+  function build(){
+    const area=W*H;
+    spacing=Math.max(30, Math.min(64, Math.sqrt(area/ (26*22)) ));
+    cols=Math.ceil(W/spacing)+2;
+    rows=Math.ceil(H/spacing)+2;
+    const offx=(W-(cols-1)*spacing)/2, offy=(H-(rows-1)*spacing)/2;
+    pts=[];
+    for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+      const hx=offx+c*spacing, hy=offy+r*spacing;
+      pts.push({hx,hy,x:hx,y:hy,vx:0,vy:0});
+    }
+  }
+
+  function resize(){
+    DPR=Math.min(devicePixelRatio||1,2);
+    W=innerWidth;H=innerHeight;
+    cvs.width=Math.floor(W*DPR);cvs.height=Math.floor(H*DPR);
+    cvs.style.width=W+'px';cvs.style.height=H+'px';
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    build();
+  }
+
+  const RAD=170;
+  function step(dt){
+    // update shockwaves
+    for(let i=pulses.length-1;i>=0;i--){pulses[i].t+=dt*1.6; if(pulses[i].t>1.6)pulses.splice(i,1);}
+    for(let i=0;i<pts.length;i++){
+      const p=pts[i];
+      // cursor force
+      const dx=p.x-mouse.x, dy=p.y-mouse.y;
+      const d2=dx*dx+dy*dy;
+      if(d2<RAD*RAD){
+        const d=Math.sqrt(d2)||1;
+        const f=(1-d/RAD);
+        const s=f*f*2.6;
+        p.vx+=(dx/d)*s; p.vy+=(dy/d)*s;
+      }
+      // shockwave force
+      for(const q of pulses){
+        const ex=p.hx-q.x, ey=p.hy-q.y;
+        const d=Math.hypot(ex,ey)||1;
+        const ring=q.t*620;
+        const band=Math.exp(-Math.pow((d-ring)/70,2))*Math.max(0,1-q.t/1.6);
+        p.vx+=(ex/d)*band*3.4; p.vy+=(ey/d)*band*3.4;
+      }
+      // spring back home
+      p.vx+=(p.hx-p.x)*0.055; p.vy+=(p.hy-p.y)*0.055;
+      p.vx*=0.86; p.vy*=0.86;
+      p.x+=p.vx; p.y+=p.vy;
+    }
+  }
+
+  let gtime=0;
+  function render(){
+    const breath=0.86+0.14*Math.sin(gtime*1.3);
+    ctx.fillStyle='#07100e'; ctx.fillRect(0,0,W,H);
+    const idx=(r,c)=>r*cols+c;
+    ctx.lineCap='round';
+    for(let r=0;r<rows;r++){
+      for(let c=0;c<cols;c++){
+        const p=pts[idx(r,c)];
+        // horizontal edge
+        if(c<cols-1){
+          const q=pts[idx(r,c+1)];
+          const disp=Math.hypot(p.x-p.hx,p.y-p.hy);
+          const g=Math.min(1,disp/40);
+          ctx.strokeStyle=`rgba(${45+g*95},${215-g*25},${175+g*40},${(0.17+g*0.6)*breath})`;
+          ctx.lineWidth=0.9+g*1.6;
+          ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke();
+        }
+        if(r<rows-1){
+          const q=pts[idx(r+1,c)];
+          const disp=Math.hypot(p.x-p.hx,p.y-p.hy);
+          const g=Math.min(1,disp/40);
+          ctx.strokeStyle=`rgba(${45+g*95},${215-g*25},${175+g*40},${(0.17+g*0.6)*breath})`;
+          ctx.lineWidth=0.9+g*1.6;
+          ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke();
+        }
+      }
+    }
+    // nodes
+    for(const p of pts){
+      const disp=Math.hypot(p.x-p.hx,p.y-p.hy);
+      const g=Math.min(1,disp/40);
+      ctx.fillStyle=`rgba(${80+g*120},255,${190+g*30},${(0.18+g*0.7)*breath})`;
+      ctx.beginPath();ctx.arc(p.x,p.y,0.6+g*2.0,0,7);ctx.fill();
+    }
+    // cursor halo
+    if(mouse.active){
+      const g=ctx.createRadialGradient(mouse.x,mouse.y,0,mouse.x,mouse.y,RAD);
+      g.addColorStop(0,'rgba(60,255,190,0.12)');
+      g.addColorStop(1,'rgba(60,255,190,0)');
+      ctx.fillStyle=g;ctx.beginPath();ctx.arc(mouse.x,mouse.y,RAD,0,7);ctx.fill();
+    }
+  }
+
+  let last=performance.now();
+  function loop(t){
+    const dt=Math.min(0.05,(t-last)/1000); last=t;
+    gtime+=dt;
+    step(dt); render();
+    requestAnimationFrame(loop);
+  }
+
+  window.addEventListener('pointermove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;mouse.active=true;});
+  window.addEventListener('pointerleave',()=>{mouse.active=false;mouse.x=-9999;mouse.y=-9999;});
+  window.addEventListener('pointerdown',e=>{pulses.push({x:e.clientX,y:e.clientY,t:0});});
+  addEventListener('resize',resize);
+  resize(); requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

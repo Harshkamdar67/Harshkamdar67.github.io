@@ -1,0 +1,88 @@
+<!-- Concept 58 · CSS Origami — folded-paper geometry built from clip-path facets that flap and unfold -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CSS Origami</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%}
+  body{background:radial-gradient(120% 120% at 50% 20%,#1c2a2e 0%,#0d1417 55%,#050809 100%);
+    color:#e9e2d0;font-family:"Cinzel",serif;overflow:hidden;display:grid;place-items:center;
+    perspective:1300px}
+  .craft{position:relative;width:min(80vmin,620px);aspect-ratio:1;transform-style:preserve-3d;
+    animation:tilt 16s ease-in-out infinite alternate;will-change:transform}
+  @keyframes tilt{from{transform:rotateX(52deg) rotateZ(0deg)}to{transform:rotateX(46deg) rotateZ(24deg)}}
+  .petal{position:absolute;inset:0;transform-origin:50% 100%;transform-style:preserve-3d;
+    clip-path:polygon(50% 0,100% 100%,0 100%);backface-visibility:visible;
+    animation:fold 6s ease-in-out infinite}
+  .p1{background:linear-gradient(160deg,#e8d8b0,#b9a06a 55%,#7d6636);animation-delay:0s;
+    box-shadow:inset 0 0 80px rgba(0,0,0,.35)}
+  .p2{background:linear-gradient(160deg,#d9c79a,#a68e58 55%,#6d5a2e);animation-delay:.25s}
+  .p3{background:linear-gradient(160deg,#cbb886,#947c48 55%,#5e4d27);animation-delay:.5s}
+  .p4{background:linear-gradient(160deg,#bfab78,#887040 55%,#514323);animation-delay:.75s}
+  .p5{background:linear-gradient(160deg,#b39f6c,#7c6538 55%,#463a1e);animation-delay:1s}
+  .p6{background:linear-gradient(160deg,#a8935f,#705a30 55%,#3c321a);animation-delay:1.25s}
+  .p7{background:linear-gradient(160deg,#9c8853,#645026 55%,#332a15);animation-delay:1.5s}
+  .p8{background:linear-gradient(160deg,#907c47,#584418 55%,#2b230f);animation-delay:1.75s}
+  @keyframes fold{
+    0%,100%{transform:rotateZ(0deg) rotateX(0deg)}
+    50%{transform:rotateZ(var(--spin,40deg)) rotateX(-70deg)}
+  }
+  .craft .petal:nth-child(1){--spin:0deg}
+  .craft .petal:nth-child(2){--spin:45deg}
+  .craft .petal:nth-child(3){--spin:90deg}
+  .craft .petal:nth-child(4){--spin:135deg}
+  .craft .petal:nth-child(5){--spin:180deg}
+  .craft .petal:nth-child(6){--spin:225deg}
+  .craft .petal:nth-child(7){--spin:270deg}
+  .craft .petal:nth-child(8){--spin:315deg}
+  .core{position:absolute;inset:34%;border-radius:50%;
+    background:radial-gradient(circle at 42% 38%,#fff2cf,#e0b85e 50%,#8a6a22 82%);
+    box-shadow:0 0 50px rgba(230,190,110,.6);transform:translateZ(30px);z-index:5}
+  .veins{position:absolute;inset:0;pointer-events:none;opacity:.5;
+    background:
+      linear-gradient(60deg,transparent 49.6%,rgba(255,255,255,.25) 50%,transparent 50.4%),
+      linear-gradient(-60deg,transparent 49.6%,rgba(255,255,255,.25) 50%,transparent 50.4%),
+      linear-gradient(0deg,transparent 49.6%,rgba(255,255,255,.18) 50%,transparent 50.4%)}
+  .shade{position:fixed;inset:0;pointer-events:none;
+    background:radial-gradient(80% 80% at 50% 40%,transparent 45%,rgba(3,6,7,.8) 100%)}
+  .title{position:fixed;top:8%;left:50%;transform:translateX(-50%);text-align:center;z-index:8;pointer-events:none}
+  .title h1{font-weight:700;font-size:clamp(1.6rem,6vw,3.2rem);letter-spacing:.34em;text-transform:uppercase;
+    color:#f3e8cf;text-shadow:0 4px 30px rgba(0,0,0,.6)}
+  .title p{font-family:"Space Mono",monospace;font-size:.6rem;letter-spacing:.6em;text-transform:uppercase;
+    opacity:.6;margin-top:.5rem;color:#d8c9a6}
+  .badge{position:fixed;bottom:1.1rem;left:1.1rem;z-index:20;font-family:"Space Mono",monospace;
+    font-size:.62rem;letter-spacing:.16em;text-transform:uppercase;
+    background:rgba(10,16,18,.55);border:1px solid rgba(230,210,160,.24);border-radius:999px;
+    padding:.5rem .85rem;backdrop-filter:blur(8px);color:rgba(240,230,210,.8)}
+  .badge a{color:#f3e8cf;text-decoration:none}
+  .badge a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+  <div class="craft" id="craft">
+    <div class="petal p1"></div><div class="petal p2"></div><div class="petal p3"></div><div class="petal p4"></div>
+    <div class="petal p5"></div><div class="petal p6"></div><div class="petal p7"></div><div class="petal p8"></div>
+    <div class="veins"></div>
+    <div class="core"></div>
+  </div>
+  <div class="shade"></div>
+  <div class="title"><h1>Origami</h1><p>eight folds · one sheet</p></div>
+  <div class="badge">CSS Origami &nbsp;·&nbsp; <a href="index.html">&larr; Gallery</a></div>
+  <script>
+    const craft=document.getElementById('craft');
+    let tx=0,cx=0;
+    addEventListener('pointermove',e=>{tx=(e.clientX/innerWidth-.5)*16;},{passive:true});
+    (function loop(){
+      cx+=(tx-cx)*.06;
+      craft.style.transform=`rotateX(50deg) rotateZ(${cx}deg)`;
+      requestAnimationFrame(loop);
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,256 @@
+<!-- Concept: Cyberpunk Targeting HUD -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cyber HUD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  html,body{ width:100%; height:100%; overflow:hidden; background:#02060a; }
+  canvas{ position:fixed; inset:0; display:block; width:100vw; height:100vh; }
+
+  .hud{ position:fixed; inset:0; z-index:4; pointer-events:none;
+        font-family:'Share Tech Mono', monospace; color:#5ef2ff;
+        text-shadow:0 0 8px rgba(90,240,255,.7); }
+
+  .corner{ position:absolute; width:74px; height:74px; border:2px solid rgba(94,242,255,.55); }
+  .corner.tl{ top:22px; left:22px; border-right:0; border-bottom:0; }
+  .corner.tr{ top:22px; right:22px; border-left:0; border-bottom:0; }
+  .corner.bl{ bottom:22px; left:22px; border-right:0; border-top:0; }
+  .corner.br{ bottom:22px; right:22px; border-left:0; border-top:0; }
+
+  .title{
+    position:absolute; top:26px; left:50%; transform:translateX(-50%);
+    font-family:'Orbitron', sans-serif; font-weight:900;
+    font-size:clamp(13px,1.7vw,22px); letter-spacing:.42em; text-transform:uppercase;
+    color:#a8f7ff; text-shadow:0 0 14px rgba(120,245,255,.9);
+    white-space:nowrap;
+  }
+  .title small{ display:block; text-align:center; font-family:'Share Tech Mono',monospace;
+    font-weight:400; font-size:11px; letter-spacing:.5em; color:#3fd0e6; margin-top:6px; }
+
+  .readout{ position:absolute; font-size:clamp(9px,1.05vw,13px); letter-spacing:.08em; line-height:1.7; }
+  .readout .k{ color:#2f8fa6; }
+  .readout .v{ color:#8ff6ff; }
+  .readout.left{ left:36px; top:150px; }
+  .readout.right{ right:36px; top:150px; text-align:right; }
+  .readout.bot{ left:50%; bottom:34px; transform:translateX(-50%); text-align:center; letter-spacing:.28em; color:#4fe6ff; }
+
+  .bar{ position:absolute; right:36px; bottom:120px; width:180px; }
+  .bar .row{ margin-bottom:9px; }
+  .bar .lab{ font-size:10px; color:#2f8fa6; letter-spacing:.14em; margin-bottom:3px; }
+  .bar .track{ height:6px; background:rgba(94,242,255,.12); border:1px solid rgba(94,242,255,.3); }
+  .bar .fill{ height:100%; background:linear-gradient(90deg,#0ff,#7dfcff); box-shadow:0 0 10px rgba(94,242,255,.9); transition:width .25s linear; }
+
+  .scanline{ position:fixed; inset:0; z-index:5; pointer-events:none; opacity:.5;
+    background:repeating-linear-gradient(180deg, rgba(0,0,0,0) 0 3px, rgba(0,0,0,.35) 3px 4px); mix-blend-mode:multiply; }
+  .vig{ position:fixed; inset:0; z-index:5; pointer-events:none;
+    background:radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0) 42%, rgba(0,0,0,.72) 100%); }
+
+  .badge{ position:fixed; left:14px; bottom:12px; z-index:20;
+    font-family:'Share Tech Mono', monospace; font-size:11px; letter-spacing:.12em;
+    color:rgba(120,240,255,.62); text-transform:uppercase;
+    background:rgba(2,16,24,.5); border:1px solid rgba(94,242,255,.24);
+    padding:6px 10px; border-radius:4px; backdrop-filter:blur(3px); user-select:none; }
+  .badge a{ color:rgba(160,245,255,.95); text-decoration:none; }
+  .badge a:hover{ text-shadow:0 0 8px rgba(94,242,255,.9); }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="hud">
+  <div class="corner tl"></div><div class="corner tr"></div>
+  <div class="corner bl"></div><div class="corner br"></div>
+  <div class="title">Sentinel OS<small>perimeter watch &middot; sector 7G</small></div>
+
+  <div class="readout left" id="roL"></div>
+  <div class="readout right" id="roR"></div>
+  <div class="readout bot" id="roB"></div>
+
+  <div class="bar">
+    <div class="row"><div class="lab">SHIELD</div><div class="track"><div class="fill" id="b1" style="width:88%"></div></div></div>
+    <div class="row"><div class="lab">POWER</div><div class="track"><div class="fill" id="b2" style="width:64%"></div></div></div>
+    <div class="row"><div class="lab">UPLINK</div><div class="track"><div class="fill" id="b3" style="width:97%"></div></div></div>
+  </div>
+</div>
+<div class="scanline"></div>
+<div class="vig"></div>
+<div class="badge">Cyber HUD &nbsp;<a href="index.html">&larr; Gallery</a></div>
+<script>
+(function(){
+  const cv = document.getElementById('c');
+  const ctx = cv.getContext('2d');
+  let W,H,dpr,cx,cy,R;
+  const CY = '#5ef2ff', CY2='#0ff', HOT='#ff3b6b', AMB='#ffb347';
+
+  function size(){
+    dpr = Math.min(window.devicePixelRatio||1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    cv.width = Math.floor(W*dpr); cv.height = Math.floor(H*dpr);
+    cv.style.width=W+'px'; cv.style.height=H+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    cx = W/2; cy = H*0.54; R = Math.min(W,H)*0.30;
+  }
+  size(); window.addEventListener('resize', size);
+
+  // radar blips
+  const blips = [];
+  for(let i=0;i<9;i++){
+    blips.push({ a: Math.random()*Math.PI*2, r: 0.25+Math.random()*0.72,
+                 sp: (Math.random()<0.5?-1:1)*(0.0006+Math.random()*0.0014),
+                 blink: Math.random()*Math.PI*2, hostile: Math.random()<0.28 });
+  }
+  let sweep = 0;
+
+  // target reticle that follows the pointer
+  let mx = cx, my = cy - R*0.4, tmx = mx, tmy = my, lock=0;
+  window.addEventListener('mousemove', e=>{ tmx=e.clientX; tmy=e.clientY; });
+  window.addEventListener('touchmove', e=>{ if(e.touches[0]){ tmx=e.touches[0].clientX; tmy=e.touches[0].clientY; } }, {passive:true});
+
+  function ring(r, segs, len, w, alpha){
+    ctx.save(); ctx.translate(cx,cy);
+    ctx.strokeStyle = 'rgba(94,242,255,'+alpha+')';
+    ctx.lineWidth = w;
+    for(let i=0;i<segs;i++){
+      const a0 = (i/segs)*Math.PI*2;
+      ctx.beginPath(); ctx.arc(0,0,r,a0,a0+len); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function crosshair(x,y,s,alpha,color){
+    ctx.strokeStyle = color || 'rgba(94,242,255,'+alpha+')';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x-s,y); ctx.lineTo(x-s*0.35,y);
+    ctx.moveTo(x+s*0.35,y); ctx.lineTo(x+s,y);
+    ctx.moveTo(x,y-s); ctx.lineTo(x,y-s*0.35);
+    ctx.moveTo(x,y+s*0.35); ctx.lineTo(x,y+s);
+    ctx.stroke();
+  }
+
+  let last = performance.now();
+  function draw(now){
+    const dt = now-last; last = now;
+    ctx.clearRect(0,0,W,H);
+
+    // faint grid backdrop
+    ctx.strokeStyle = 'rgba(30,120,150,0.14)'; ctx.lineWidth = 1;
+    const gs = 46;
+    for(let x=0;x<W;x+=gs){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+    for(let y=0;y<H;y+=gs){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+
+    sweep += dt*0.0016;
+
+    // radar rings
+    ring(R*0.34, 40, 0.05, 2, 0.5);
+    ring(R*0.66, 60, 0.04, 1.6, 0.42);
+    ring(R,      80, 0.035, 1.4, 0.34);
+    ring(R*0.9,  4,  Math.PI/2*0.55, 3, 0.7);
+
+    // cross axes
+    ctx.strokeStyle='rgba(94,242,255,0.22)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(cx-R,cy); ctx.lineTo(cx+R,cy);
+    ctx.moveTo(cx,cy-R); ctx.lineTo(cx,cy+R); ctx.stroke();
+
+    // rotating sweep gradient
+    ctx.save(); ctx.translate(cx,cy); ctx.rotate(sweep);
+    const g = ctx.createConicGradient ? ctx.createConicGradient(0,0,0) : null;
+    if(g){ g.addColorStop(0,'rgba(94,242,255,0.55)'); g.addColorStop(0.08,'rgba(94,242,255,0)'); g.addColorStop(1,'rgba(94,242,255,0)'); }
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,R,0,Math.PI*2); ctx.closePath();
+    ctx.fillStyle = g || 'rgba(94,242,255,0.06)'; ctx.fill();
+    // sweep line
+    ctx.strokeStyle='rgba(180,250,255,0.9)'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(R,0); ctx.stroke();
+    ctx.restore();
+
+    // blips
+    blips.forEach(b=>{
+      b.a += b.sp*dt; b.blink += dt*0.006;
+      const x = cx + Math.cos(b.a)*R*b.r;
+      const y = cy + Math.sin(b.a)*R*b.r;
+      // sweep detection glow
+      let da = ((b.a - sweep) % (Math.PI*2) + Math.PI*2) % (Math.PI*2);
+      const fresh = Math.max(0, 1 - da/1.4);
+      const pulse = 0.5 + 0.5*Math.sin(b.blink);
+      const col = b.hostile ? HOT : CY2;
+      ctx.beginPath();
+      ctx.arc(x,y, 2.2 + fresh*3.2, 0, Math.PI*2);
+      ctx.fillStyle = b.hostile
+        ? 'rgba(255,59,107,'+(0.35+pulse*0.6)+')'
+        : 'rgba(0,255,255,'+(0.35+pulse*0.55)+')';
+      ctx.shadowColor = col; ctx.shadowBlur = 12+fresh*14; ctx.fill(); ctx.shadowBlur=0;
+      if(b.hostile && fresh>0.25){
+        crosshair(x,y,10,0.9,'rgba(255,59,107,0.95)');
+      }
+    });
+
+    // targeting reticle follows pointer (with slight lag + rotation)
+    mx += (tmx-mx)*0.14; my += (tmy-my)*0.14;
+    const distC = Math.hypot(mx-cx, my-cy);
+    lock = Math.max(0, 1 - Math.abs(distC-R*0.66)/ (R*0.5));
+    ctx.save(); ctx.translate(mx,my); ctx.rotate(now*0.0008);
+    ctx.strokeStyle = lock>0.6 ? 'rgba(255,179,71,0.95)' : 'rgba(94,242,255,0.85)';
+    ctx.lineWidth = 1.6;
+    const rr = 26;
+    for(let i=0;i<4;i++){
+      ctx.beginPath(); ctx.arc(0,0,rr, i*Math.PI/2+0.25, i*Math.PI/2+Math.PI/2-0.25); ctx.stroke();
+    }
+    ctx.restore();
+    crosshair(mx,my, 42, 0.9, lock>0.6?'rgba(255,179,71,0.9)':'rgba(94,242,255,0.85)');
+    // range text
+    ctx.font = '11px "Share Tech Mono", monospace';
+    ctx.fillStyle = lock>0.6 ? AMB : 'rgba(150,250,255,0.9)';
+    ctx.fillText((lock>0.6?'LOCK ':'TRACK ')+distC.toFixed(0)+'m', mx+50, my-46);
+
+    // outer decorative arcs
+    ctx.save(); ctx.translate(cx,cy); ctx.rotate(-now*0.0004);
+    ring(R*1.12, 3, Math.PI*0.42, 3, 0.55);
+    ctx.restore();
+    ctx.save(); ctx.translate(cx,cy); ctx.rotate(now*0.0006);
+    ring(R*1.24, 5, Math.PI*0.22, 2, 0.4);
+    ctx.restore();
+
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+
+  // readouts
+  const roL = document.getElementById('roL');
+  const roR = document.getElementById('roR');
+  const roB = document.getElementById('roB');
+  const b1=document.getElementById('b1'), b2=document.getElementById('b2'), b3=document.getElementById('b3');
+  function pad(n,l){ return String(n).padStart(l,'0'); }
+  function upd(){
+    const t = new Date();
+    const hh = pad(t.getHours(),2), mm=pad(t.getMinutes(),2), ss=pad(t.getSeconds(),2);
+    const lat = (12.9716 + Math.sin(performance.now()*0.0002)*0.001).toFixed(4);
+    const lon = (77.5946 + Math.cos(performance.now()*0.00023)*0.001).toFixed(4);
+    const sig = (96 + Math.random()*3).toFixed(1);
+    const th = (36.4 + Math.random()*0.4).toFixed(2);
+    const jm = (Math.random()*4).toFixed(2);
+    roL.innerHTML =
+      '<span class="k">LAT</span> <span class="v">'+lat+'N</span><br>'+
+      '<span class="k">LON</span> <span class="v">'+lon+'E</span><br>'+
+      '<span class="k">ALT</span> <span class="v">0.42km</span><br>'+
+      '<span class="k">SIG</span> <span class="v">'+sig+'%</span>';
+    roR.innerHTML =
+      '<span class="k">SYS</span> <span class="v">'+hh+':'+mm+':'+ss+'</span><br>'+
+      '<span class="k">THR</span> <span class="v">'+th+'&deg;C</span><br>'+
+      '<span class="k">JAM</span> <span class="v">'+jm+'GHz</span><br>'+
+      '<span class="k">NET</span> <span class="v">SECURE</span>';
+    roB.textContent = '>> SENTINEL ONLINE · ' + (9+ (Math.floor(Math.random()*2))) + ' CONTACTS TRACKED · NO BREACH <<';
+    b1.style.width = (80+Math.random()*18).toFixed(0)+'%';
+    b2.style.width = (55+Math.random()*25).toFixed(0)+'%';
+    b3.style.width = (92+Math.random()*7).toFixed(0)+'%';
+    setTimeout(upd, 420);
+  }
+  upd();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,113 @@
+<!-- Harmonograph — layered damped Lissajous curves drawn live and slowly evolving -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Harmonograph</title>
+<style>
+:root{color-scheme:dark}
+html,body{margin:0;height:100%;background:#050308;overflow:hidden}
+canvas{display:block;width:100vw;height:100vh}
+.badge{position:fixed;left:14px;bottom:14px;z-index:9;font:12px/1.35 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  color:rgba(255,255,255,.5);background:rgba(14,8,18,.35);border:1px solid rgba(255,255,255,.1);
+  padding:6px 11px;border-radius:999px;backdrop-filter:blur(8px);letter-spacing:.03em}
+.badge a{color:rgba(240,190,255,.9);text-decoration:none}
+.badge a:hover{color:#fff}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="badge">Harmonograph &middot; <a href="index.html">&larr; Gallery</a></div>
+<script>
+(()=>{
+const c=document.getElementById('c');
+const ctx=c.getContext('2d',{alpha:false});
+let W=0,H=0,DPR=1;
+
+const NPENS=6;
+const SUB=4, MAXS=1500;
+let pens=[];
+
+function mkPen(i){
+  const fx=2+((Math.random()*4)|0)+Math.random()*0.02;
+  const fy=2+((Math.random()*4)|0)+Math.random()*0.02;
+  return {
+    fx, fy,
+    fx2:fx*(1.5+Math.random()*0.5), fy2:fy*(1.5+Math.random()*0.5),
+    px:Math.random()*6.283, py:Math.random()*6.283,
+    px2:Math.random()*6.283, py2:Math.random()*6.283,
+    d:0.0007+Math.random()*0.0007,
+    hue:(190+i*44+Math.random()*30)%360,
+    targHue:0, s:0, lx:0, ly:0, init:false, warm:0
+  };
+}
+function respawn(p){
+  const n=mkPen(0);
+  p.fx=n.fx;p.fy=n.fy;p.fx2=n.fx2;p.fy2=n.fy2;
+  p.px=n.px;p.py=n.py;p.px2=n.px2;p.py2=n.py2;
+  p.d=n.d;p.targHue=(p.hue+50+Math.random()*90)%360;p.s=0;p.init=false;
+}
+function init(){
+  pens=[];
+  for(let i=0;i<NPENS;i++){const p=mkPen(i);p.targHue=p.hue;p.s=Math.random()*MAXS*0.7;pens.push(p);}
+}
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1,2);
+  W=window.innerWidth;H=window.innerHeight;
+  c.width=Math.floor(W*DPR);c.height=Math.floor(H*DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.fillStyle='#050308';ctx.fillRect(0,0,W,H);
+  init();
+}
+addEventListener('resize',resize);resize();
+
+const mouse={x:0.5,y:0.5,active:false};
+addEventListener('pointermove',e=>{mouse.x=e.clientX/W;mouse.y=e.clientY/H;mouse.active=true;});
+addEventListener('pointerleave',()=>mouse.active=false);
+
+function frame(){
+  ctx.globalCompositeOperation='source-over';
+  ctx.fillStyle='rgba(5,3,8,0.011)';
+  ctx.fillRect(0,0,W,H);
+  ctx.globalCompositeOperation='lighter';
+  ctx.lineCap='round';
+  ctx.lineWidth=1.15;
+
+  const cx=W/2,cy=H/2;
+  const A=Math.min(W,H)*0.46;
+  let rot=0;
+  if(mouse.active)rot=(mouse.x-0.5)*0.9;
+  const ca=Math.cos(rot),sa=Math.sin(rot);
+
+  for(let i=0;i<NPENS;i++){
+    const p=pens[i];
+    p.hue+=(p.targHue-p.hue)*0.0035;
+    const hue=(p.hue+360)%360;
+    ctx.strokeStyle='hsla('+hue+',92%,66%,0.5)';
+    for(let k=0;k<SUB;k++){
+      p.s++;
+      const th=p.s*0.0105;
+      const e=Math.exp(-p.d*p.s);
+      const e2=e*e;
+      let x=A*(e*Math.sin(p.fx*th+p.px)+0.42*e2*Math.sin(p.fx2*th+p.px2));
+      let y=A*(e*Math.sin(p.fy*th+p.py)+0.42*e2*Math.sin(p.fy2*th+p.py2));
+      const rx=x*ca-y*sa, ry=x*sa+y*ca;
+      const X=cx+rx, Y=cy+ry;
+      if(!p.init){p.lx=X;p.ly=Y;p.init=true;}
+      ctx.beginPath();
+      ctx.moveTo(p.lx,p.ly);
+      ctx.lineTo(X,Y);
+      ctx.stroke();
+      p.lx=X;p.ly=Y;
+      if(p.s>MAXS){respawn(p);break;}
+    }
+  }
+  ctx.globalCompositeOperation='source-over';
+  requestAnimationFrame(frame);
+}
+frame();
+})();
+</script>
+</body>
+</html>

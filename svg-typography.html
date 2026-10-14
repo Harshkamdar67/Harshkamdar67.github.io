@@ -1,0 +1,125 @@
+<!-- svg-typography — SVG Text Effects: Resonance -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resonance Type</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;background:#0a0b10;overflow:hidden}
+  body{font-family:'Space Mono',monospace}
+  #stage{position:fixed;inset:0;width:100vw;height:100vh;display:block}
+  .badge{position:fixed;left:18px;bottom:18px;z-index:10;display:inline-flex;gap:10px;align-items:baseline;
+    padding:7px 14px;border:1px solid rgba(255,255,255,.16);border-radius:999px;background:rgba(14,16,26,.45);
+    -webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);color:rgba(226,232,244,.7);
+    text-decoration:none;font-size:10px;letter-spacing:.16em;text-transform:uppercase;opacity:.7;
+    transition:opacity .4s,border-color .4s}
+  .badge:hover{opacity:1;border-color:rgba(255,255,255,.45)}
+  .badge .t{font-family:'Archivo Black',sans-serif;font-size:13px;letter-spacing:.04em;text-transform:none;color:rgba(238,242,252,.95)}
+  .badge .g{color:rgba(226,232,244,.45)}
+  .marquee{animation:mq 34s linear infinite}
+  @keyframes mq{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  #outline{stroke-dasharray:2400;stroke-dashoffset:2400}
+</style>
+</head>
+<body>
+<svg id="stage" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid meet" aria-label="Stylised resonance typography">
+  <defs>
+    <linearGradient id="chrome" x1="0" y1="0" x2="1" y2="0.6">
+      <stop offset="0%" stop-color="#f4f7ff"/>
+      <stop offset="28%" stop-color="#9fb6d6"/>
+      <stop offset="50%" stop-color="#ffd98a"/>
+      <stop offset="72%" stop-color="#7fe6d0"/>
+      <stop offset="100%" stop-color="#c7d6f0"/>
+    </linearGradient>
+    <linearGradient id="ghost" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#2a2f42"/>
+      <stop offset="100%" stop-color="#1a1e2c"/>
+    </linearGradient>
+    <filter id="distort" x="-15%" y="-25%" width="130%" height="150%" color-interpolation-filters="sRGB">
+      <feTurbulence id="tt" type="fractalNoise" baseFrequency="0.0022 0.012" numOctaves="2" seed="4" result="n">
+        <animate attributeName="baseFrequency" dur="14s" repeatCount="indefinite" values="0.0022 0.012;0.004 0.008;0.0022 0.012"/>
+      </feTurbulence>
+      <feDisplacementMap id="dd" in="SourceGraphic" in2="n" scale="26" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="tglow" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="14" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <radialGradient id="bg" cx="50%" cy="45%" r="70%">
+      <stop offset="0%" stop-color="#141826"/>
+      <stop offset="60%" stop-color="#0c0e16"/>
+      <stop offset="100%" stop-color="#0a0b10"/>
+    </radialGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)"/>
+
+  <g opacity="0.5" clip-path="inset(0 0 0 0)">
+    <g class="marquee">
+      <text x="0" y="270" fill="url(#ghost)" font-family="'Archivo Black',sans-serif" font-size="150" letter-spacing="6">RESONANCE &#160; RESONANCE &#160; RESONANCE &#160; RESONANCE &#160; </text>
+      <text x="0" y="760" fill="url(#ghost)" font-family="'Archivo Black',sans-serif" font-size="150" letter-spacing="6">FREQUENCY &#160; FREQUENCY &#160; FREQUENCY &#160; FREQUENCY &#160; </text>
+    </g>
+  </g>
+
+  <g filter="url(#tglow)" opacity="0.55">
+    <text id="glowText" x="800" y="500" text-anchor="middle" fill="none" stroke="url(#chrome)" stroke-width="2"
+      font-family="'Archivo Black',sans-serif" font-size="200" letter-spacing="4">RESONANCE</text>
+  </g>
+
+  <g filter="url(#distort)">
+    <text id="fillText" x="800" y="500" text-anchor="middle" fill="url(#chrome)"
+      font-family="'Archivo Black',sans-serif" font-size="200" letter-spacing="4">RESONANCE</text>
+  </g>
+
+  <text id="outline" x="800" y="500" text-anchor="middle" fill="none" stroke="#eef2fc" stroke-width="1.4" stroke-opacity="0.85"
+    font-family="'Archivo Black',sans-serif" font-size="200" letter-spacing="4">RESONANCE</text>
+
+  <text x="800" y="600" text-anchor="middle" fill="#7c88a6" font-family="'Space Mono',monospace" font-size="15" letter-spacing="10">A N &#160; A R C H I T E C T U R E &#160; O F &#160; S O U N D</text>
+
+  <g stroke="#ffffff" stroke-opacity="0.06">
+    <line x1="0" y1="500" x2="1600" y2="500"/>
+    <line x1="800" y1="0" x2="800" y2="900"/>
+  </g>
+</svg>
+<a class="badge" href="index.html"><span class="t">Resonance</span><span class="g">&larr; Gallery</span></a>
+<script>
+(function(){
+  var svg=document.getElementById("stage");
+  var dd=document.getElementById("dd");
+  var tx=0,txx=0;
+  window.addEventListener("pointermove",function(e){
+    var r=svg.getBoundingClientRect();
+    tx=((e.clientX-r.left)/r.width-0.5)*2;
+  },{passive:true});
+  function frame(now){
+    txx+=(tx-txx)*0.06;
+    dd.setAttribute("scale",(26+Math.abs(txx)*34).toFixed(1));
+    dd.setAttribute("xChannelSelector","R");
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  var o=document.getElementById("outline");
+  var olen=2400;
+  function drawOnce(){
+    o.style.transition="none";
+    o.style.strokeDashoffset=olen;
+    requestAnimationFrame(function(){requestAnimationFrame(function(){
+      o.style.transition="stroke-dashoffset 3.6s cubic-bezier(.5,0,.2,1) .3s";
+      o.style.strokeDashoffset=0;
+    });});
+  }
+  function startOutline(){
+    try{ olen=o.getComputedTextLength(); }catch(err){}
+    o.style.strokeDasharray=olen+" "+olen;
+    drawOnce();
+    setInterval(drawOnce,6800);
+  }
+  if(document.fonts&&document.fonts.ready){document.fonts.ready.then(startOutline);} else {setTimeout(startOutline,900);}
+})();
+</script>
+</body>
+</html>

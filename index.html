@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>100 / A Creative HTML Showcase</title>
+<meta name="description" content="One hundred standalone, self-contained HTML experiments in motion, light and mathematics.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#07070a; --bg2:#0d0d13; --fg:#f4f4f7; --dim:#8b8b98; --dim2:#5b5b68;
+  --line:rgba(255,255,255,.09); --card:#111118;
+  --font:'Space Grotesk',system-ui,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg); color:var(--fg); font-family:var(--font);
+  -webkit-font-smoothing:antialiased; overflow-x:hidden;
+}
+body::before{
+  content:""; position:fixed; inset:-30%; z-index:-2; pointer-events:none;
+  background:
+    radial-gradient(40% 40% at 15% 10%, rgba(123,47,247,.20), transparent 70%),
+    radial-gradient(45% 45% at 85% 15%, rgba(0,229,255,.14), transparent 70%),
+    radial-gradient(50% 50% at 60% 95%, rgba(241,7,163,.14), transparent 70%);
+  filter:blur(20px); animation:drift 26s ease-in-out infinite alternate;
+}
+@keyframes drift{0%{transform:translate3d(-2%,-1%,0) scale(1)}100%{transform:translate3d(3%,2%,0) scale(1.08)}}
+body::after{
+  content:""; position:fixed; inset:0; z-index:-1; pointer-events:none; opacity:.5;
+  background-image:radial-gradient(rgba(255,255,255,.045) 1px, transparent 1px);
+  background-size:22px 22px;
+  mask-image:radial-gradient(70% 60% at 50% 30%, #000 0%, transparent 100%);
+}
+
+/* ---------- nav ---------- */
+.nav{
+  position:sticky; top:0; z-index:60; display:flex; align-items:center; gap:18px;
+  padding:14px clamp(16px,4vw,48px);
+  background:rgba(7,7,10,.62); backdrop-filter:blur(16px) saturate(140%);
+  border-bottom:1px solid var(--line);
+}
+.brand{font-weight:700; letter-spacing:-.02em; font-size:16px; display:flex; align-items:center; gap:10px}
+.brand .dot{width:9px;height:9px;border-radius:50%;
+  background:linear-gradient(135deg,#7b2ff7,#f107a3); box-shadow:0 0 12px #f107a3aa}
+.brand span{color:var(--dim); font-weight:400; font-size:13px}
+.nav .spacer{flex:1}
+.nav a.gh{color:var(--dim); text-decoration:none; font-size:13px; font-family:var(--mono);
+  padding:8px 12px; border:1px solid var(--line); border-radius:9px; transition:.2s}
+.nav a.gh:hover{color:var(--fg); border-color:rgba(255,255,255,.28)}
+
+/* ---------- hero ---------- */
+.hero{padding:clamp(48px,9vw,120px) clamp(16px,4vw,48px) 24px; max-width:1400px; margin:0 auto}
+.eyebrow{font-family:var(--mono); font-size:12px; letter-spacing:.28em; text-transform:uppercase;
+  color:var(--dim); margin-bottom:22px; display:flex; align-items:center; gap:12px}
+.eyebrow::before{content:""; width:34px; height:1px; background:var(--dim2)}
+h1{font-size:clamp(56px,13vw,180px); line-height:.86; letter-spacing:-.045em; font-weight:700}
+h1 .grad{background:linear-gradient(100deg,#fff 0%,#b18cff 34%,#f107a3 62%,#00e5ff 100%);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  background-size:200% 100%; animation:shine 9s linear infinite}
+@keyframes shine{to{background-position:200% 0}}
+.hero p.lede{margin-top:26px; max-width:640px; color:var(--dim); font-size:clamp(15px,1.5vw,19px); line-height:1.55}
+.stats{display:flex; gap:36px; margin-top:40px; flex-wrap:wrap}
+.stat b{display:block; font-size:28px; font-weight:700; letter-spacing:-.02em}
+.stat span{font-family:var(--mono); font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--dim2)}
+
+/* ---------- controls ---------- */
+.controls{position:sticky; top:57px; z-index:50; margin-top:34px;
+  padding:16px clamp(16px,4vw,48px);
+  background:linear-gradient(rgba(7,7,10,.92),rgba(7,7,10,.72));
+  backdrop-filter:blur(14px); border-bottom:1px solid var(--line)}
+.controls .inner{max-width:1400px; margin:0 auto; display:flex; gap:16px; align-items:center; flex-wrap:wrap}
+.search{position:relative; flex:0 0 260px}
+.search input{width:100%; background:var(--bg2); border:1px solid var(--line); color:var(--fg);
+  font-family:var(--mono); font-size:13px; padding:11px 14px 11px 36px; border-radius:10px; outline:none; transition:.2s}
+.search input:focus{border-color:rgba(177,140,255,.6); box-shadow:0 0 0 3px rgba(177,140,255,.13)}
+.search svg{position:absolute; left:12px; top:50%; transform:translateY(-50%); opacity:.5}
+.chips{display:flex; gap:8px; flex-wrap:wrap; flex:1}
+.chip{font-family:var(--mono); font-size:12px; color:var(--dim); background:transparent;
+  border:1px solid var(--line); padding:8px 13px; border-radius:999px; cursor:pointer; transition:.18s; white-space:nowrap}
+.chip:hover{color:var(--fg); border-color:rgba(255,255,255,.3)}
+.chip.on{color:#0b0b10; background:var(--fg); border-color:var(--fg); font-weight:600}
+.btn{font-family:var(--mono); font-size:12px; color:var(--fg); background:var(--bg2);
+  border:1px solid var(--line); padding:10px 15px; border-radius:10px; cursor:pointer; transition:.18s; white-space:nowrap}
+.btn:hover{border-color:rgba(255,255,255,.3); transform:translateY(-1px)}
+.btn.accent{background:linear-gradient(120deg,#7b2ff7,#f107a3); border:none; color:#fff; font-weight:600}
+.btn.accent:hover{filter:brightness(1.12)}
+
+/* ---------- grid ---------- */
+main{max-width:1400px; margin:0 auto; padding:34px clamp(16px,4vw,48px) 80px}
+.grid{display:grid; gap:18px; grid-template-columns:repeat(auto-fill,minmax(236px,1fr))}
+.card{
+  position:relative; aspect-ratio:4/3; border-radius:16px; overflow:hidden;
+  border:1px solid var(--line); background:var(--card); cursor:pointer; text-decoration:none; color:inherit;
+  transition:transform .35s cubic-bezier(.2,.8,.2,1), box-shadow .35s, border-color .35s;
+  isolation:isolate;
+}
+.card:hover{transform:translateY(-6px); border-color:rgba(255,255,255,.25);
+  box-shadow:0 24px 50px -18px rgba(0,0,0,.85), 0 0 0 1px rgba(255,255,255,.05)}
+.card .art{position:absolute; inset:0; z-index:0;
+  background:linear-gradient(135deg,var(--c1),var(--c2)); background-size:220% 220%;
+  animation:pan 8s ease-in-out infinite alternate; opacity:.92}
+@keyframes pan{0%{background-position:0% 0%}100%{background-position:100% 100%}}
+.card .art::after{content:""; position:absolute; inset:-40%;
+  background:conic-gradient(from 0deg, transparent 0 55%, rgba(255,255,255,.32) 70%, transparent 82%);
+  animation:spin 9s linear infinite; mix-blend-mode:overlay; opacity:.7}
+@keyframes spin{to{transform:rotate(360deg)}}
+.card .art::before{content:""; position:absolute; inset:0;
+  background:radial-gradient(120% 90% at 50% 0%, transparent 30%, rgba(0,0,0,.55) 100%)}
+.card .live{position:absolute; inset:0; z-index:1; opacity:0; transition:opacity .5s}
+.card.previewing .live{opacity:1}
+.card .live iframe{width:100%; height:100%; border:0; display:block; background:#000}
+.card .scrim{position:absolute; inset:0; z-index:2;
+  background:linear-gradient(to top, rgba(4,4,8,.92) 0%, rgba(4,4,8,.28) 42%, transparent 70%)}
+.card .num{position:absolute; top:12px; left:14px; z-index:3; font-family:var(--mono);
+  font-size:11px; color:rgba(255,255,255,.9); letter-spacing:.08em;
+  background:rgba(0,0,0,.34); padding:4px 8px; border-radius:7px; backdrop-filter:blur(6px)}
+.card .meta{position:absolute; left:14px; right:14px; bottom:13px; z-index:3}
+.card .meta h3{font-size:16px; font-weight:600; letter-spacing:-.01em; line-height:1.2}
+.card .meta .c{font-family:var(--mono); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase;
+  color:rgba(255,255,255,.62); margin-top:5px}
+.card .arrow{position:absolute; top:12px; right:12px; z-index:3; width:28px; height:28px; border-radius:50%;
+  display:grid; place-items:center; background:rgba(0,0,0,.34); backdrop-filter:blur(6px);
+  opacity:0; transform:translate(-4px,4px); transition:.3s}
+.card:hover .arrow{opacity:1; transform:none}
+.empty{grid-column:1/-1; text-align:center; color:var(--dim); padding:80px 0; font-family:var(--mono); font-size:13px}
+
+/* ---------- footer ---------- */
+footer{border-top:1px solid var(--line); padding:40px clamp(16px,4vw,48px);
+  color:var(--dim2); font-family:var(--mono); font-size:12px; display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap; max-width:1400px; margin:0 auto}
+footer b{color:var(--dim)}
+@media (max-width:560px){ .search{flex:1 1 100%} .stats{gap:24px} }
+</style>
+</head>
+<body>
+<header class="nav">
+  <div class="brand"><span class="dot"></span>100 <span>&nbsp;/ a creative HTML showcase</span></div>
+  <div class="spacer"></div>
+  <a class="gh" href="#grid">browse ↓</a>
+</header>
+
+<section class="hero">
+  <div class="eyebrow">one hundred standalone experiments</div>
+  <h1>Make them<br><span class="grad">say wow.</span></h1>
+  <p class="lede">A hundred self-contained HTML pieces — WebGL shaders, generative systems, physics, fractals, retro and pure-CSS art. Every one is a single file you can open, read and deploy. Hover a card for a live render.</p>
+  <div class="stats">
+    <div class="stat"><b>100</b><span>pieces</span></div>
+    <div class="stat"><b>10</b><span>disciplines</span></div>
+    <div class="stat"><b>1</b><span>file each</span></div>
+    <div class="stat"><b>0</b><span>duplicates</span></div>
+  </div>
+</section>
+
+<div class="controls">
+  <div class="inner">
+    <div class="search">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
+      <input id="q" type="text" placeholder="search 100 pieces…  ( / )" autocomplete="off">
+    </div>
+    <div class="chips" id="chips"></div>
+    <button class="btn" id="shuffle">surprise me</button>
+    <button class="btn accent" id="ptoggle">Live previews: on</button>
+  </div>
+</div>
+
+<main><div class="grid" id="grid"></div></main>
+
+<footer>
+  <div><b>100</b> — a creative HTML showcase. Single-file, self-contained, ready for GitHub Pages.</div>
+  <div>built with three.js · WebGL · canvas · CSS &amp; SVG</div>
+</footer>
+
+<script>
+const PIECES = [{"n": 1, "slug": "particle-galaxy", "title": "Particle Galaxy", "cat": "3D Worlds", "c1": "#7b2ff7", "c2": "#f107a3"}, {"n": 2, "slug": "lowpoly-island", "title": "Floating Low-Poly Island", "cat": "3D Worlds", "c1": "#0ba360", "c2": "#3cba92"}, {"n": 3, "slug": "neon-grid-city", "title": "Neon Grid City", "cat": "3D Worlds", "c1": "#ff2e97", "c2": "#00e5ff"}, {"n": 4, "slug": "crystal-prism", "title": "Crystal Prism", "cat": "3D Worlds", "c1": "#a8ff78", "c2": "#78ffd6"}, {"n": 5, "slug": "dna-helix", "title": "DNA Helix", "cat": "3D Worlds", "c1": "#00c6ff", "c2": "#0072ff"}, {"n": 6, "slug": "wire-mountains", "title": "Wireframe Mountains", "cat": "3D Worlds", "c1": "#141e30", "c2": "#243b55"}, {"n": 7, "slug": "planet-atmosphere", "title": "Planet Atmosphere", "cat": "3D Worlds", "c1": "#134e5e", "c2": "#71b280"}, {"n": 8, "slug": "solar-system", "title": "Solar System", "cat": "3D Worlds", "c1": "#f7971e", "c2": "#ffd200"}, {"n": 9, "slug": "holo-globe", "title": "Holographic Globe", "cat": "3D Worlds", "c1": "#00f2fe", "c2": "#4facfe"}, {"n": 10, "slug": "infinite-cubes", "title": "Infinite Cubes", "cat": "3D Worlds", "c1": "#c31432", "c2": "#240b36"}, {"n": 11, "slug": "mandelbulb", "title": "Mandelbulb", "cat": "Shaders", "c1": "#8e2de2", "c2": "#4a00e0"}, {"n": 12, "slug": "raymarch-tunnel", "title": "Raymarched Tunnel", "cat": "Shaders", "c1": "#f12711", "c2": "#f5af19"}, {"n": 13, "slug": "black-hole", "title": "Black Hole", "cat": "Shaders", "c1": "#0f0c29", "c2": "#f12711"}, {"n": 14, "slug": "voronoi-shader", "title": "Voronoi Cells", "cat": "Shaders", "c1": "#11998e", "c2": "#38ef7d"}, {"n": 15, "slug": "plasma-fluid", "title": "Plasma Fluid", "cat": "Shaders", "c1": "#ee0979", "c2": "#ff6a00"}, {"n": 16, "slug": "kaleidoscope", "title": "Kaleidoscope", "cat": "Shaders", "c1": "#c471ed", "c2": "#f64f59"}, {"n": 17, "slug": "metaballs", "title": "Metaballs", "cat": "Shaders", "c1": "#43cea2", "c2": "#185a9d"}, {"n": 18, "slug": "aurora", "title": "Aurora", "cat": "Shaders", "c1": "#1a2a6c", "c2": "#2ecc71"}, {"n": 19, "slug": "warp-speed", "title": "Warp Speed", "cat": "Shaders", "c1": "#232526", "c2": "#00d2ff"}, {"n": 20, "slug": "liquid-metal", "title": "Liquid Metal", "cat": "Shaders", "c1": "#bdc3c7", "c2": "#2c3e50"}, {"n": 21, "slug": "flow-field", "title": "Flow Field", "cat": "Generative", "c1": "#360033", "c2": "#0b8793"}, {"n": 22, "slug": "boids", "title": "Boids Flocking", "cat": "Generative", "c1": "#1f4037", "c2": "#99f2c8"}, {"n": 23, "slug": "reaction-diffusion", "title": "Reaction Diffusion", "cat": "Generative", "c1": "#f953c6", "c2": "#b91d73"}, {"n": 24, "slug": "slime-mold", "title": "Slime Mold Network", "cat": "Generative", "c1": "#fc4a1a", "c2": "#f7b733"}, {"n": 25, "slug": "fireworks", "title": "Fireworks", "cat": "Generative", "c1": "#000428", "c2": "#ff512f"}, {"n": 26, "slug": "sand-sim", "title": "Falling Sand", "cat": "Generative", "c1": "#e1eec3", "c2": "#f05053"}, {"n": 27, "slug": "particle-text", "title": "Particle Text", "cat": "Generative", "c1": "#3a1c71", "c2": "#ffaf7b"}, {"n": 28, "slug": "lissajous", "title": "Harmonograph", "cat": "Generative", "c1": "#0f2027", "c2": "#2c5364"}, {"n": 29, "slug": "game-of-life", "title": "Game of Life", "cat": "Generative", "c1": "#093028", "c2": "#237a57"}, {"n": 30, "slug": "rain-glass", "title": "Rain on Glass", "cat": "Generative", "c1": "#2b5876", "c2": "#4e4376"}, {"n": 31, "slug": "cloth-sim", "title": "Cloth Simulation", "cat": "Physics", "c1": "#d31027", "c2": "#ea384d"}, {"n": 32, "slug": "jelly-softbody", "title": "Jelly Soft Body", "cat": "Physics", "c1": "#f7797d", "c2": "#fbd786"}, {"n": 33, "slug": "pendulum-wave", "title": "Pendulum Wave", "cat": "Physics", "c1": "#4568dc", "c2": "#b06ab3"}, {"n": 34, "slug": "double-pendulum", "title": "Double Pendulum", "cat": "Physics", "c1": "#000000", "c2": "#ffb347"}, {"n": 35, "slug": "nbody-gravity", "title": "N-Body Gravity", "cat": "Physics", "c1": "#141e30", "c2": "#6a3093"}, {"n": 36, "slug": "rope-physics", "title": "Rope Physics", "cat": "Physics", "c1": "#373b44", "c2": "#4286f4"}, {"n": 37, "slug": "domino-chain", "title": "Domino Chain", "cat": "Physics", "c1": "#fdc830", "c2": "#f37335"}, {"n": 38, "slug": "water-ripple", "title": "Water Ripple", "cat": "Physics", "c1": "#2193b0", "c2": "#6dd5ed"}, {"n": 39, "slug": "cloth-flag", "title": "Waving Flag", "cat": "Physics", "c1": "#e52d27", "c2": "#b31217"}, {"n": 40, "slug": "bubble-universe", "title": "Bubble Universe", "cat": "Physics", "c1": "#654ea3", "c2": "#eaafc8"}, {"n": 41, "slug": "mandelbrot-zoom", "title": "Mandelbrot Zoom", "cat": "Fractals", "c1": "#1e130c", "c2": "#9a8478"}, {"n": 42, "slug": "julia-set", "title": "Julia Set", "cat": "Fractals", "c1": "#200122", "c2": "#6f0000"}, {"n": 43, "slug": "lorenz-attractor", "title": "Lorenz Attractor", "cat": "Fractals", "c1": "#000046", "c2": "#1cb5e0"}, {"n": 44, "slug": "fourier-epicycles", "title": "Fourier Epicycles", "cat": "Fractals", "c1": "#16222a", "c2": "#3a6073"}, {"n": 45, "slug": "fractal-tree", "title": "Fractal Tree", "cat": "Fractals", "c1": "#134e5e", "c2": "#71b280"}, {"n": 46, "slug": "spirograph", "title": "Spirograph", "cat": "Fractals", "c1": "#4b6cb7", "c2": "#182848"}, {"n": 47, "slug": "de-jong-attractor", "title": "De Jong Attractor", "cat": "Fractals", "c1": "#870000", "c2": "#190a05"}, {"n": 48, "slug": "sierpinski", "title": "Sierpinski", "cat": "Fractals", "c1": "#2c3e50", "c2": "#fd746c"}, {"n": 49, "slug": "harmonograph-3d", "title": "3D Harmonograph", "cat": "Fractals", "c1": "#5f2c82", "c2": "#49a09d"}, {"n": 50, "slug": "mobius-strip", "title": "Mobius Strip", "cat": "Fractals", "c1": "#42275a", "c2": "#734b6d"}, {"n": 51, "slug": "gradient-blobs", "title": "Gradient Blobs", "cat": "CSS", "c1": "#ff9a9e", "c2": "#fad0c4"}, {"n": 52, "slug": "css-cube-3d", "title": "CSS 3D Cube", "cat": "CSS", "c1": "#0f0c29", "c2": "#302b63"}, {"n": 53, "slug": "glass-card", "title": "Glassmorphism", "cat": "CSS", "c1": "#667eea", "c2": "#764ba2"}, {"n": 54, "slug": "neumorph", "title": "Neumorphism", "cat": "CSS", "c1": "#e0e0e0", "c2": "#bebebe"}, {"n": 55, "slug": "conic-spinner", "title": "Conic Gradient Art", "cat": "CSS", "c1": "#00c9ff", "c2": "#92fe9d"}, {"n": 56, "slug": "kinetic-type", "title": "Kinetic Typography", "cat": "CSS", "c1": "#f7b733", "c2": "#fc4a1a"}, {"n": 57, "slug": "css-scene", "title": "Pure CSS Scene", "cat": "CSS", "c1": "#355c7d", "c2": "#c06c84"}, {"n": 58, "slug": "css-origami", "title": "CSS Origami", "cat": "CSS", "c1": "#ffecd2", "c2": "#fcb69f"}, {"n": 59, "slug": "css-orb", "title": "CSS Plasma Orb", "cat": "CSS", "c1": "#8e2de2", "c2": "#00c6ff"}, {"n": 60, "slug": "css-grid-motion", "title": "Grid in Motion", "cat": "CSS", "c1": "#11998e", "c2": "#1c92d2"}, {"n": 61, "slug": "svg-morph", "title": "SVG Morphing", "cat": "SVG", "c1": "#ff6e7f", "c2": "#bfe9ff"}, {"n": 62, "slug": "svg-linedraw", "title": "Self-Drawing Line Art", "cat": "SVG", "c1": "#0f2027", "c2": "#2c5364"}, {"n": 63, "slug": "svg-gooey", "title": "Gooey Filter", "cat": "SVG", "c1": "#ff512f", "c2": "#dd2476"}, {"n": 64, "slug": "svg-data-viz", "title": "Animated Chart", "cat": "SVG", "c1": "#2980b9", "c2": "#6dd5fa"}, {"n": 65, "slug": "svg-mesh-gradient", "title": "Mesh Gradient", "cat": "SVG", "c1": "#f953c6", "c2": "#4facfe"}, {"n": 66, "slug": "svg-typography", "title": "SVG Text Effects", "cat": "SVG", "c1": "#1a2980", "c2": "#26d0ce"}, {"n": 67, "slug": "svg-particles", "title": "Constellation", "cat": "SVG", "c1": "#000428", "c2": "#004e92"}, {"n": 68, "slug": "svg-topographic", "title": "Contour Map", "cat": "SVG", "c1": "#134e5e", "c2": "#71b280"}, {"n": 69, "slug": "svg-waveform", "title": "Waveform", "cat": "SVG", "c1": "#f12711", "c2": "#f5af19"}, {"n": 70, "slug": "svg-isometric", "title": "Isometric Scene", "cat": "SVG", "c1": "#ffd194", "c2": "#70e1f5"}, {"n": 71, "slug": "matrix-rain", "title": "Matrix Rain", "cat": "Retro", "c1": "#000000", "c2": "#00ff41"}, {"n": 72, "slug": "glitch-text", "title": "Glitch Text", "cat": "Retro", "c1": "#0f0f0f", "c2": "#ff003c"}, {"n": 73, "slug": "crt-terminal", "title": "CRT Terminal", "cat": "Retro", "c1": "#02120a", "c2": "#39ff14"}, {"n": 74, "slug": "vaporwave", "title": "Vaporwave", "cat": "Retro", "c1": "#ff71ce", "c2": "#01cdfe"}, {"n": 75, "slug": "cyber-hud", "title": "Cyber HUD", "cat": "Retro", "c1": "#001a33", "c2": "#00e5ff"}, {"n": 76, "slug": "neon-sign", "title": "Neon Sign", "cat": "Retro", "c1": "#12001a", "c2": "#ff00e5"}, {"n": 77, "slug": "pixel-scene", "title": "Pixel Art Scene", "cat": "Retro", "c1": "#2b0f54", "c2": "#ff8c42"}, {"n": 78, "slug": "ascii-art", "title": "ASCII Animation", "cat": "Retro", "c1": "#000000", "c2": "#ffd700"}, {"n": 79, "slug": "halftone", "title": "Halftone", "cat": "Retro", "c1": "#1a1a1a", "c2": "#ff5f6d"}, {"n": 80, "slug": "synth-sun", "title": "Synth Sun", "cat": "Retro", "c1": "#ff512f", "c2": "#8e2de2"}, {"n": 81, "slug": "ink-water", "title": "Ink in Water", "cat": "Organic", "c1": "#000428", "c2": "#4ca1af"}, {"n": 82, "slug": "smoke-plume", "title": "Smoke Plume", "cat": "Organic", "c1": "#232526", "c2": "#8e9eab"}, {"n": 83, "slug": "fire-shader", "title": "Procedural Fire", "cat": "Organic", "c1": "#200122", "c2": "#ff512f"}, {"n": 84, "slug": "ocean-waves", "title": "Shader Ocean", "cat": "Organic", "c1": "#0f2027", "c2": "#f7971e"}, {"n": 85, "slug": "volumetric-clouds", "title": "Volumetric Clouds", "cat": "Organic", "c1": "#1e3c72", "c2": "#f7b733"}, {"n": 86, "slug": "lightning", "title": "Lightning", "cat": "Organic", "c1": "#0f0c29", "c2": "#00d2ff"}, {"n": 87, "slug": "tornado", "title": "Tornado", "cat": "Organic", "c1": "#373b44", "c2": "#4286f4"}, {"n": 88, "slug": "nebula", "title": "Nebula", "cat": "Organic", "c1": "#0b0b2b", "c2": "#a445b2"}, {"n": 89, "slug": "coral-growth", "title": "Coral Growth", "cat": "Organic", "c1": "#0b486b", "c2": "#f56217"}, {"n": 90, "slug": "vines-growth", "title": "Growing Vines", "cat": "Organic", "c1": "#093028", "c2": "#38ef7d"}, {"n": 91, "slug": "particle-clock", "title": "Particle Clock", "cat": "Data & Geometry", "c1": "#0f0c29", "c2": "#00e5ff"}, {"n": 92, "slug": "string-art", "title": "String Art", "cat": "Data & Geometry", "c1": "#1c1c1c", "c2": "#ffd200"}, {"n": 93, "slug": "grid-distortion", "title": "Grid Distortion", "cat": "Data & Geometry", "c1": "#111111", "c2": "#00ffa3"}, {"n": 94, "slug": "typographic-poster", "title": "Typographic Poster", "cat": "Data & Geometry", "c1": "#141414", "c2": "#ff3d00"}, {"n": 95, "slug": "geometric-tessellation", "title": "Tessellation", "cat": "Data & Geometry", "c1": "#243949", "c2": "#517fa4"}, {"n": 96, "slug": "generative-poster", "title": "Generative Poster", "cat": "Data & Geometry", "c1": "#2c003e", "c2": "#ff6f61"}, {"n": 97, "slug": "orbital-rings", "title": "Orbital Rings", "cat": "Data & Geometry", "c1": "#000046", "c2": "#64b3f4"}, {"n": 98, "slug": "network-graph", "title": "Network Graph", "cat": "Data & Geometry", "c1": "#0b0c10", "c2": "#45a29e"}, {"n": 99, "slug": "bar-race", "title": "Bar Chart Race", "cat": "Data & Geometry", "c1": "#0f2027", "c2": "#00c6ff"}, {"n": 100, "slug": "radar-scope", "title": "Radar Scope", "cat": "Data & Geometry", "c1": "#001a0d", "c2": "#00ff7f"}];
+const grid = document.getElementById('grid');
+const chipRow = document.getElementById('chips');
+const searchEl = document.getElementById('q');
+let activeCat = 'All', query = '';
+let previewsOn = true;
+
+function cardHTML(p){
+  return `<a class="card" href="${p.slug}.html" data-slug="${p.slug}" style="--c1:${p.c1};--c2:${p.c2}">
+    <div class="art"></div>
+    <div class="live" aria-hidden="true"></div>
+    <div class="scrim"></div>
+    <div class="num">${String(p.n).padStart(3,'0')}</div>
+    <div class="arrow" title="Open"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg></div>
+    <div class="meta"><h3>${p.title}</h3><div class="c">${p.cat}</div></div>
+  </a>`;
+}
+
+function render(){
+  const q = query.trim().toLowerCase();
+  const list = PIECES.filter(p =>
+    (activeCat==='All' || p.cat===activeCat) &&
+    (!q || p.title.toLowerCase().includes(q) || p.slug.includes(q) || p.cat.toLowerCase().includes(q)));
+  if(!list.length){ grid.innerHTML = '<div class="empty">No pieces match "'+query+'".</div>'; return; }
+  grid.innerHTML = list.map(cardHTML).join('');
+  attachPreviews();
+}
+
+let timer=null;
+function attachPreviews(){
+  grid.querySelectorAll('.card').forEach(card=>{
+    const live = card.querySelector('.live');
+    card.addEventListener('mouseenter',()=>{
+      if(!previewsOn) return;
+      clearTimeout(timer);
+      timer=setTimeout(()=>{
+        if(!card.matches(':hover')) return;
+        live.innerHTML = `<iframe loading="lazy" title="${card.dataset.slug}" src="${card.dataset.slug}.html"></iframe>`;
+        card.classList.add('previewing');
+      }, 260);
+    });
+    card.addEventListener('mouseleave',()=>{
+      clearTimeout(timer);
+      card.classList.remove('previewing');
+      setTimeout(()=>{ if(!card.matches(':hover')) live.innerHTML=''; }, 500);
+    });
+  });
+}
+
+// category chips
+const cats = ['All', ...Array.from(new Set(PIECES.map(p=>p.cat)))];
+chipRow.innerHTML = cats.map(c=>`<button class="chip${c==='All'?' on':''}" data-cat="${c}">${c}</button>`).join('');
+chipRow.addEventListener('click',e=>{
+  const b=e.target.closest('.chip'); if(!b) return;
+  activeCat=b.dataset.cat;
+  chipRow.querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x===b));
+  render();
+});
+
+searchEl.addEventListener('input',()=>{ query=searchEl.value; render(); });
+
+document.getElementById('shuffle').addEventListener('click',()=>{
+  const pool = PIECES.filter(p=>activeCat==='All'||p.cat===activeCat);
+  const p = pool[Math.floor(Math.random()*pool.length)];
+  window.location.href = p.slug+'.html';
+});
+
+const pt=document.getElementById('ptoggle');
+pt.addEventListener('click',()=>{
+  previewsOn=!previewsOn;
+  pt.classList.toggle('accent',previewsOn);
+  pt.textContent = previewsOn ? 'Live previews: on' : 'Live previews: off';
+  if(!previewsOn){ grid.querySelectorAll('.live').forEach(l=>l.innerHTML=''); grid.querySelectorAll('.card').forEach(c=>c.classList.remove('previewing')); }
+});
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='/' && document.activeElement!==searchEl){ e.preventDefault(); searchEl.focus(); }
+});
+
+render();
+</script>
+</body>
+</html>

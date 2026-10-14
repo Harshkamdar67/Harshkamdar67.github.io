@@ -1,0 +1,144 @@
+<!-- svg-particles — Constellation Particle Network -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Constellation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;background:#04081a;overflow:hidden}
+  body{font-family:'Space Mono',monospace}
+  #stage{position:fixed;inset:0;width:100vw;height:100vh;display:block}
+  .badge{position:fixed;left:18px;bottom:18px;z-index:10;display:inline-flex;gap:10px;align-items:baseline;
+    padding:7px 14px;border:1px solid rgba(150,190,255,.2);border-radius:999px;background:rgba(8,14,34,.5);
+    -webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);color:rgba(206,224,255,.7);
+    text-decoration:none;font-size:10px;letter-spacing:.16em;text-transform:uppercase;opacity:.7;
+    transition:opacity .4s,border-color .4s}
+  .badge:hover{opacity:1;border-color:rgba(150,190,255,.55)}
+  .badge .t{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14px;letter-spacing:.02em;text-transform:none;color:rgba(235,242,255,.95)}
+  .badge .g{color:rgba(206,224,255,.45)}
+</style>
+</head>
+<body>
+<svg id="stage" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-label="Constellation particle network following the cursor">
+  <defs>
+    <radialGradient id="dot" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#eaf2ff" stop-opacity="1"/>
+      <stop offset="55%" stop-color="#9dc4ff" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#9dc4ff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="star" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff3d6" stop-opacity="1"/>
+      <stop offset="45%" stop-color="#ffc978" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#ffc978" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="neb" cx="26%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#12224e" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#04081a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="neb2" cx="82%" cy="74%" r="60%">
+      <stop offset="0%" stop-color="#2a1740" stop-opacity="0.75"/>
+      <stop offset="100%" stop-color="#04081a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vig" cx="50%" cy="50%" r="75%">
+      <stop offset="55%" stop-color="#000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000" stop-opacity="0.6"/>
+    </radialGradient>
+  </defs>
+  <rect width="1600" height="900" fill="#04081a"/>
+  <rect width="1600" height="900" fill="url(#neb)"/>
+  <rect width="1600" height="900" fill="url(#neb2)"/>
+  <g id="lines"></g>
+  <g id="dots"></g>
+  <rect width="1600" height="900" fill="url(#vig)"/>
+</svg>
+<a class="badge" href="index.html"><span class="t">Constellation</span><span class="g">&larr; Gallery</span></a>
+<script>
+(function(){
+  var NS="http://www.w3.org/2000/svg";
+  var svg=document.getElementById("stage");
+  var linesG=document.getElementById("lines"), dotsG=document.getElementById("dots");
+  var W=1600,H=900, N=125, MAXL=620, LINK=118, CURSOR_R=250;
+  var parts=[];
+  for(var i=0;i<N;i++){
+    parts.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-0.5)*0.42,vy:(Math.random()-0.5)*0.42,
+      r:1.3+Math.random()*2.2, big:Math.random()<0.07});
+  }
+  var circs=parts.map(function(p){
+    var c=document.createElementNS(NS,"circle");
+    c.setAttribute("fill",p.big?"url(#star)":"url(#dot)");
+    c.setAttribute("r",(p.big?9:p.r*3.2).toFixed(1));
+    dotsG.appendChild(c); return c;
+  });
+  var lineEls=[];
+  for(var i=0;i<MAXL;i++){
+    var l=document.createElementNS(NS,"line");
+    l.setAttribute("stroke","#7fb2ff"); l.setAttribute("stroke-width","1");
+    l.setAttribute("opacity","0"); linesG.appendChild(l); lineEls.push(l);
+  }
+  var mx=W/2,my=H/2,tx=W/2,ty=H/2,active=false;
+  window.addEventListener("pointermove",function(e){
+    var r=svg.getBoundingClientRect();
+    tx=(e.clientX-r.left)/r.width*W; ty=(e.clientY-r.top)/r.height*H; active=true;
+  },{passive:true});
+  window.addEventListener("pointerleave",function(){active=false;});
+  window.addEventListener("pointerdown",function(){
+    for(var k=0;k<10;k++){
+      var a=Math.random()*Math.PI*2, s=1.5+Math.random()*2.5;
+      parts.push({x:tx,y:ty,vx:Math.cos(a)*s,vy:Math.sin(a)*s,r:1.4+Math.random()*2,big:false});
+      var c=document.createElementNS(NS,"circle");
+      c.setAttribute("fill","url(#dot)"); c.setAttribute("r","6"); dotsG.appendChild(c); circs.push(c);
+      if(parts.length>190){parts.splice(0,10);dotsG.removeChild(circs.shift());circs.splice(0,10);}
+    }
+  });
+  function frame(){
+    mx+=(tx-mx)*0.14; my+=(ty-my)*0.14;
+    var i,j,p;
+    for(i=0;i<parts.length;i++){
+      p=parts[i];
+      p.x+=p.vx; p.y+=p.vy;
+      if(p.x<0){p.x=0;p.vx*=-1;} if(p.x>W){p.x=W;p.vx*=-1;}
+      if(p.y<0){p.y=0;p.vy*=-1;} if(p.y>H){p.y=H;p.vy*=-1;}
+      circs[i].setAttribute("cx",p.x.toFixed(1)); circs[i].setAttribute("cy",p.y.toFixed(1));
+      if(p.big){
+        var s=1+0.4*Math.sin(performance.now()/420+i);
+        circs[i].setAttribute("r",(9*s).toFixed(2));
+      }
+    }
+    var li=0, L2=LINK*LINK, CR2=CURSOR_R*CURSOR_R;
+    for(i=0;i<parts.length && li<MAXL;i++){
+      for(j=i+1;j<parts.length && li<MAXL;j++){
+        var dx=parts[i].x-parts[j].x, dy=parts[i].y-parts[j].y, d2=dx*dx+dy*dy;
+        if(d2<L2){
+          var d=Math.sqrt(d2), a=(1-d/LINK)*0.55;
+          var el=lineEls[li++];
+          el.setAttribute("x1",parts[i].x.toFixed(1)); el.setAttribute("y1",parts[i].y.toFixed(1));
+          el.setAttribute("x2",parts[j].x.toFixed(1)); el.setAttribute("y2",parts[j].y.toFixed(1));
+          el.setAttribute("opacity",a.toFixed(3));
+        }
+      }
+    }
+    if(active){
+      for(i=0;i<parts.length && li<MAXL;i++){
+        var ddx=parts[i].x-mx, ddy=parts[i].y-my, dd2=ddx*ddx+ddy*ddy;
+        if(dd2<CR2){
+          var dd=Math.sqrt(dd2), aa=(1-dd/CURSOR_R)*0.9;
+          var el=lineEls[li++];
+          el.setAttribute("x1",mx.toFixed(1)); el.setAttribute("y1",my.toFixed(1));
+          el.setAttribute("x2",parts[i].x.toFixed(1)); el.setAttribute("y2",parts[i].y.toFixed(1));
+          el.setAttribute("opacity",aa.toFixed(3));
+        }
+      }
+    }
+    for(;li<MAXL;li++){ if(lineEls[li].getAttribute("opacity")!=="0") lineEls[li].setAttribute("opacity","0"); }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

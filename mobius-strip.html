@@ -1,0 +1,161 @@
+<!-- Mobius Strip — a one-sided surface drawn as a luminous lattice of generative line art -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mobius Strip</title>
+<style>
+  html,body{margin:0;height:100%;background:#04030d;overflow:hidden;}
+  canvas{display:block;}
+  .badge{position:fixed;left:14px;bottom:14px;z-index:5;
+    font:12px/1.4 ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;
+    color:rgba(255,255,255,.6);background:rgba(8,6,20,.42);backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+    border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:7px 13px;letter-spacing:.03em;}
+  .badge a{color:rgba(255,255,255,.86);text-decoration:none;border-bottom:1px solid rgba(255,255,255,.28);}
+  .badge a:hover{color:#fff;}
+</style>
+</head>
+<body>
+<div class="badge">Mobius Strip &nbsp;&middot;&nbsp; <a href="index.html">&larr; Gallery</a></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+'use strict';
+var scene=new THREE.Scene();
+var camera=new THREE.PerspectiveCamera(45,window.innerWidth/window.innerHeight,0.1,100);
+camera.position.set(0,0,6.0);
+
+var renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+renderer.setSize(window.innerWidth,window.innerHeight);
+renderer.setClearColor(0x04030d,1);
+document.body.appendChild(renderer.domElement);
+
+window.addEventListener('resize',function(){
+  camera.aspect=window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth,window.innerHeight);
+});
+
+/* hsl -> rgb helper */
+function hsl(h,s,l){
+  h=((h%360)+360)/360%1;
+  function f(p,q,t){ if(t<0)t+=1; if(t>1)t-=1;
+    if(t<1/6)return p+(q-p)*6*t; if(t<1/2)return q; if(t<2/3)return p+(q-p)*(2/3-t)*6; return p; }
+  var q=l<0.5?l*(1+s):l+s-l*s, p=2*l-q;
+  return [f(p,q,h+1/3),f(p,q,h),f(p,q,h-1/3)];
+}
+
+var R=1.7, W2=0.62;
+function mob(u,v){
+  var cu=Math.cos(u), su=Math.sin(u), hv=Math.cos(u*0.5);
+  var rad=R+v*hv;
+  return [rad*cu, rad*su, v*Math.sin(u*0.5)];
+}
+
+var NU=440, MV=76, MU=54, NV=110;
+var segs=MV*NU+MU*NV;
+var positions=new Float32Array(segs*2*3);
+var colors=new Float32Array(segs*2*3);
+var pi=0, ci=0;
+
+function emit(u,v,hu,li){
+  var p=mob(u,v);
+  positions[pi++]=p[0]; positions[pi++]=p[1]; positions[pi++]=p[2];
+  var rgb=hsl(hu,0.92,li);
+  colors[ci++]=rgb[0]; colors[ci++]=rgb[1]; colors[ci++]=rgb[2];
+}
+function seg(u1,v1,u2,v2,hu,li){
+  emit(u1,v1,hu,li); emit(u2,v2,hu,li);
+}
+
+/* longitudinal curves (constant v) */
+for(var m=0;m<MV;m++){
+  var v=-W2+(m/(MV-1))*2*W2;
+  var edge=Math.abs(v)/W2;
+  for(var i=0;i<NU;i++){
+    var u1=i/NU*Math.PI*2, u2=(i+1)/NU*Math.PI*2;
+    var hu=188+ (u1/(Math.PI*2))*142;
+    var li=0.34+0.30*edge;
+    seg(u1,v,u2,v,hu,li);
+  }
+}
+/* transverse ribs (constant u) */
+for(var n=0;n<MU;n++){
+  var uu=n/MU*Math.PI*2;
+  var hu2=188+(uu/(Math.PI*2))*142;
+  for(var j=0;j<NV;j++){
+    var v1=-W2+(j/NV)*2*W2, v2=-W2+((j+1)/NV)*2*W2;
+    var li2=0.30+0.28*(Math.abs(v1)/W2);
+    seg(uu,v1,uu,v2,hu2,li2);
+  }
+}
+/* bright rim edges */
+var rims=[-W2,W2];
+for(var e=0;e<2;e++){
+  for(var i2=0;i2<NU;i2++){
+    var a1=i2/NU*Math.PI*2, a2=(i2+1)/NU*Math.PI*2;
+    seg(a1,rims[e],a2,rims[e],192+(a1/(Math.PI*2))*150,0.72);
+  }
+}
+
+var geo=new THREE.BufferGeometry();
+geo.setAttribute('position',new THREE.BufferAttribute(positions,3));
+geo.setAttribute('color',new THREE.BufferAttribute(colors,3));
+
+var mat=new THREE.LineBasicMaterial({vertexColors:true,transparent:true,opacity:0.85,
+  blending:THREE.AdditiveBlending,depthWrite:false});
+var mesh=new THREE.LineSegments(geo,mat);
+
+var group=new THREE.Group();
+group.add(mesh);
+scene.add(group);
+
+/* a faint ghost copy for depth */
+var mat2=new THREE.LineBasicMaterial({vertexColors:true,transparent:true,opacity:0.18,
+  blending:THREE.AdditiveBlending,depthWrite:false});
+var ghost=new THREE.LineSegments(geo,mat2);
+var g2=new THREE.Group();
+g2.add(ghost);
+g2.rotation.y=Math.PI;
+g2.scale.setScalar(1.28);
+scene.add(g2);
+
+/* interaction */
+var mxr=0,myr=0,dragging=false,lx=0,ly=0;
+window.addEventListener('pointerdown',function(e){dragging=true;lx=e.clientX;ly=e.clientY;});
+window.addEventListener('pointerup',function(){dragging=false;});
+window.addEventListener('pointercancel',function(){dragging=false;});
+window.addEventListener('pointermove',function(e){
+  if(!dragging)return;
+  myr+=(e.clientX-lx)*0.006;
+  mxr+=(e.clientY-ly)*0.006;
+  mxr=Math.max(-1.3,Math.min(1.3,mxr));
+  lx=e.clientX; ly=e.clientY;
+});
+
+var last=0;
+function frame(now){
+  if(!last) last=now;
+  var dt=Math.min(0.05,(now-last)/1000); last=now;
+  var t=now/1000;
+
+  group.rotation.y=t*0.24+myr;
+  group.rotation.x=0.42+mxr+Math.sin(t*0.13)*0.10;
+  group.rotation.z=Math.sin(t*0.09)*0.06;
+
+  g2.rotation.y=-t*0.13;
+  g2.rotation.x=-0.3+Math.sin(t*0.11)*0.12;
+
+  mat.opacity=0.78+0.12*Math.sin(t*0.9);
+
+  renderer.render(scene,camera);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

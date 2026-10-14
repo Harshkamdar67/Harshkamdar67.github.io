@@ -1,0 +1,75 @@
+<!-- Concept 56 · Kinetic Type — bold words scaling, rotating and marching in rhythmic opposing rows -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kinetic Type</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo+Black&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%}
+  body{background:#0a0a0b;color:#f5f5f0;font-family:"Anton",sans-serif;overflow:hidden}
+  .band{position:absolute;left:-10%;width:120%;white-space:nowrap;display:flex;align-items:center;
+    gap:3vw;will-change:transform}
+  .band span{font-size:clamp(3.4rem,15vw,13rem);line-height:.86;letter-spacing:-.02em;
+    text-transform:uppercase;display:inline-block}
+  .b1{top:2%;animation:slideL 26s linear infinite}
+  .b2{top:30%;animation:slideR 32s linear infinite}
+  .b3{top:58%;animation:slideL 22s linear infinite}
+  .outline{-webkit-text-stroke:2px #f5f5f0;color:transparent}
+  .accent{background:linear-gradient(90deg,#ff2d55,#ff9f0a,#ffd60a);-webkit-background-clip:text;
+    background-clip:text;color:transparent}
+  .cool{background:linear-gradient(90deg,#0a84ff,#bf5af2,#30d158);-webkit-background-clip:text;
+    background-clip:text;color:transparent}
+  .beat{animation:beat 2.6s ease-in-out infinite}
+  .spin{display:inline-block;animation:rot 8s linear infinite}
+  @keyframes slideL{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  @keyframes slideR{from{transform:translateX(-50%)}to{transform:translateX(0)}}
+  @keyframes beat{0%,100%{transform:scale(1)}50%{transform:scale(1.16)}}
+  @keyframes rot{to{transform:rotate(360deg)}}
+  .center{position:fixed;inset:0;display:grid;place-items:center;pointer-events:none;z-index:5}
+  .center .mark{font-family:"Space Mono",monospace;font-size:clamp(.6rem,1.3vw,.95rem);
+    letter-spacing:.7em;text-transform:uppercase;color:rgba(245,245,240,.7);
+    background:rgba(10,10,11,.55);padding:.7rem 1.2rem;border:1px solid rgba(245,245,240,.22);
+    border-radius:999px;backdrop-filter:blur(6px);animation:beat 2.6s ease-in-out infinite}
+  .grain{position:fixed;inset:0;pointer-events:none;opacity:.12;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>")}
+  .badge{position:fixed;bottom:1.1rem;left:1.1rem;z-index:20;font-family:"Space Mono",monospace;
+    font-size:.62rem;letter-spacing:.16em;text-transform:uppercase;
+    background:rgba(14,14,16,.6);border:1px solid rgba(255,255,255,.18);border-radius:999px;
+    padding:.5rem .85rem;backdrop-filter:blur(8px);color:rgba(255,255,255,.72)}
+  .badge a{color:#fff;text-decoration:none}
+  .badge a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+  <div class="band b1">
+    <span class="accent beat">Move</span><span class="outline">Rhythm</span><span>Type</span>
+    <span class="accent beat">Move</span><span class="outline">Rhythm</span><span>Type</span>
+  </div>
+  <div class="band b2">
+    <span class="outline">Loud</span><span class="cool">Quiet</span><span>Loud</span>
+    <span class="outline">Loud</span><span class="cool">Quiet</span><span>Loud</span>
+  </div>
+  <div class="band b3">
+    <span>Shift</span><span class="accent spin">✳</span><span class="outline">Scale</span><span class="cool beat">Shift</span>
+    <span>Shift</span><span class="accent spin">✳</span><span class="outline">Scale</span><span class="cool beat">Shift</span>
+  </div>
+  <div class="center"><div class="mark">kinetic typography</div></div>
+  <div class="grain"></div>
+  <div class="badge">Kinetic Type &nbsp;·&nbsp; <a href="index.html">&larr; Gallery</a></div>
+  <script>
+    const bands=[...document.querySelectorAll('.band')];
+    let base=1,target=1;
+    addEventListener('pointermove',e=>{target=.8+(e.clientX/innerWidth)*.5;},{passive:true});
+    (function loop(){
+      base+=(target-base)*.06;
+      bands.forEach(b=>b.style.fontSize=(base*100)+'%');
+      requestAnimationFrame(loop);
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,117 @@
+<!-- Boids — a crisp flocking simulation drawn as luminous velocity streaks -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Boids</title>
+<style>
+:root{color-scheme:dark}
+html,body{margin:0;height:100%;background:#05070d;overflow:hidden}
+canvas{display:block;width:100vw;height:100vh}
+.badge{position:fixed;left:14px;bottom:14px;z-index:9;font:12px/1.35 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  color:rgba(255,255,255,.5);background:rgba(8,10,18,.35);border:1px solid rgba(255,255,255,.1);
+  padding:6px 11px;border-radius:999px;backdrop-filter:blur(8px);letter-spacing:.03em}
+.badge a{color:rgba(170,220,255,.9);text-decoration:none}
+.badge a:hover{color:#fff}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="badge">Boids &middot; <a href="index.html">&larr; Gallery</a></div>
+<script>
+(()=>{
+const c=document.getElementById('c');
+const ctx=c.getContext('2d',{alpha:false});
+let W=0,H=0,DPR=1;
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1,2);
+  W=window.innerWidth;H=window.innerHeight;
+  c.width=Math.floor(W*DPR);c.height=Math.floor(H*DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.fillStyle='#05070d';ctx.fillRect(0,0,W,H);
+}
+addEventListener('resize',resize);resize();
+
+const N=380;
+const x=new Float32Array(N),y=new Float32Array(N),vx=new Float32Array(N),vy=new Float32Array(N),hue=new Float32Array(N);
+for(let i=0;i<N;i++){
+  x[i]=Math.random()*W;y[i]=Math.random()*H;
+  const a=Math.random()*6.283,s=1.4+Math.random()*0.9;
+  vx[i]=Math.cos(a)*s;vy[i]=Math.sin(a)*s;
+  hue[i]=Math.random();
+}
+const mouse={x:W*0.5,y:H*0.5,active:false,repel:false};
+addEventListener('pointermove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;mouse.active=true;});
+addEventListener('pointerleave',()=>{mouse.active=false;});
+addEventListener('pointerdown',e=>{
+  for(let i=0;i<N;i++){
+    const dx=x[i]-e.clientX,dy=y[i]-e.clientY,d2=dx*dx+dy*dy;
+    if(d2<90000&&d2>1){const f=160/d2;vx[i]+=dx*f;vy[i]+=dy*f;}
+  }
+});
+
+const PER=52,PER2=PER*PER,SEP=20,SEP2=SEP*SEP;
+const MAXS=2.9,MAXF=0.075;
+const PAL=32,pal=new Array(PAL);
+
+function frame(){
+  ctx.fillStyle='rgba(5,7,13,0.16)';
+  ctx.fillRect(0,0,W,H);
+  ctx.globalCompositeOperation='lighter';
+  ctx.lineCap='round';
+  ctx.lineWidth=1.5;
+  for(let k=0;k<PAL;k++)pal[k]='hsla('+(185+(k/PAL)*95)+',90%,'+(56+(k/PAL)*16)+'%,0.72)';
+
+  for(let i=0;i<N;i++){
+    let cx=0,cy=0,ax=0,ay=0,sxp=0,syp=0,n=0,ns=0;
+    const xi=x[i],yi=y[i];
+    for(let j=0;j<N;j++){
+      if(j===i)continue;
+      const dx=x[j]-xi,dy=y[j]-yi,d2=dx*dx+dy*dy;
+      if(d2<PER2){
+        cx+=x[j];cy+=y[j];ax+=vx[j];ay+=vy[j];n++;
+        if(d2<SEP2&&d2>0.0001){const inv=1/Math.sqrt(d2);sxp-=dx*inv;syp-=dy*inv;ns++;}
+      }
+    }
+    let fx=0,fy=0;
+    if(n>0){
+      cx/=n;cy/=n;ax/=n;ay/=n;
+      // cohesion
+      let dx=cx-xi,dy=cy-yi;let d=Math.hypot(dx,dy)||1;fx+=dx/d*0.55;fy+=dy/d*0.55;
+      // alignment
+      fx+=ax*0.9;fy+=ay*0.9;
+    }
+    if(ns>0){fx+=sxp*1.7;fy+=syp*1.7;}
+    if(mouse.active){
+      const dx=mouse.x-xi,dy=mouse.y-yi,d2=dx*dx+dy*dy;
+      if(d2<105000){const d=Math.sqrt(d2)||1;const f=2.6/(d+40);fx+=dx/d*f;fy+=dy/d*f;}
+    }
+    // limit force
+    const fm=Math.hypot(fx,fy);
+    if(fm>MAXF){fx=fx/fm*MAXF;fy=fy/fm*MAXF;}
+    vx[i]+=fx;vy[i]+=fy;
+    const s=Math.hypot(vx[i],vy[i]);
+    if(s>MAXS){vx[i]=vx[i]/s*MAXS;vy[i]=vy[i]/s*MAXS;}
+    else if(s<0.9&&s>0){vx[i]=vx[i]/s*0.9;vy[i]=vy[i]/s*0.9;}
+    x[i]+=vx[i];y[i]+=vy[i];
+    if(x[i]<0)x[i]=W;else if(x[i]>W)x[i]=0;
+    if(y[i]<0)y[i]=H;else if(y[i]>H)y[i]=0;
+  }
+  for(let i=0;i<N;i++){
+    const s=Math.hypot(vx[i],vy[i]);
+    const k=Math.min(PAL-1,(hue[i]*0.55+s/MAXS*0.45)*(PAL-1))|0;
+    ctx.strokeStyle=pal[k];
+    ctx.beginPath();
+    ctx.moveTo(x[i],y[i]);
+    ctx.lineTo(x[i]-vx[i]*4.4,y[i]-vy[i]*4.4);
+    ctx.stroke();
+  }
+  ctx.globalCompositeOperation='source-over';
+  requestAnimationFrame(frame);
+}
+frame();
+})();
+</script>
+</body>
+</html>

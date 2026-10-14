@@ -1,0 +1,210 @@
+<!-- svg-data-viz — Animated Data Visualization -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Viz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700&family=Azeret+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;background:#080d18;overflow:hidden}
+  body{font-family:'Azeret Mono',monospace}
+  #stage{position:fixed;inset:0;width:100vw;height:100vh;display:block}
+  .badge{position:fixed;left:18px;bottom:18px;z-index:10;display:inline-flex;gap:10px;align-items:baseline;
+    padding:7px 14px;border:1px solid rgba(242,177,52,.22);border-radius:999px;background:rgba(12,20,34,.5);
+    -webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);color:rgba(214,226,240,.7);
+    text-decoration:none;font-size:10px;letter-spacing:.16em;text-transform:uppercase;opacity:.72;
+    transition:opacity .4s,border-color .4s}
+  .badge:hover{opacity:1;border-color:rgba(242,177,52,.55)}
+  .badge .t{font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:700;letter-spacing:.02em;text-transform:none;color:rgba(238,244,252,.95)}
+  .badge .g{color:rgba(214,226,240,.45)}
+  .fadeIn{opacity:0;animation:fi .9s ease forwards}
+  @keyframes fi{to{opacity:1}}
+  .pop{opacity:0;transform-box:fill-box;transform-origin:center;transform:scale(.2);animation:pp .5s cubic-bezier(.2,1.5,.4,1) forwards}
+  @keyframes pp{to{opacity:1;transform:scale(1)}}
+  .drawline{stroke-dasharray:1;stroke-dashoffset:1;animation:dl 2.1s .35s cubic-bezier(.5,0,.2,1) forwards}
+  @keyframes dl{to{stroke-dashoffset:0}}
+  .arcdraw{animation:arc 1.7s .5s cubic-bezier(.4,0,.2,1) forwards}
+  @keyframes arc{to{stroke-dashoffset:var(--off)}}
+</style>
+</head>
+<body>
+<svg id="stage" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid meet" aria-label="Animated renewable energy data visualization">
+  <defs>
+    <linearGradient id="area" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f2b134" stop-opacity="0.55"/>
+      <stop offset="55%" stop-color="#e8862f" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#e8862f" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="ln" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#f7d074"/>
+      <stop offset="100%" stop-color="#f2a134"/>
+    </linearGradient>
+    <linearGradient id="bar" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#1f8f6a"/>
+      <stop offset="100%" stop-color="#3fe0a2"/>
+    </linearGradient>
+    <filter id="softglow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <clipPath id="reveal"><rect id="revealRect" x="150" y="120" width="0" height="640"><animate attributeName="width" from="0" to="940" begin="0.35s" dur="1.9s" fill="freeze" calcMode="spline" keySplines="0.5 0 0.2 1" keyTimes="0;1"/></rect></clipPath>
+    <radialGradient id="bg" cx="30%" cy="20%" r="90%">
+      <stop offset="0%" stop-color="#111c31"/>
+      <stop offset="60%" stop-color="#0a1120"/>
+      <stop offset="100%" stop-color="#080d18"/>
+    </radialGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <g id="grid" stroke="#ffffff" stroke-opacity="0.055"></g>
+
+  <text x="150" y="86" class="fadeIn" style="animation-delay:.05s" fill="#eef4fc" font-family="'Plus Jakarta Sans',sans-serif" font-weight="700" font-size="34">Solar PV &#8212; Annual Capacity Added</text>
+  <text x="150" y="112" class="fadeIn" style="animation-delay:.15s" fill="#7f93ad" font-family="'Azeret Mono',monospace" font-size="13" letter-spacing="2">GIGAWATTS / YEAR &#183; ILLUSTRATIVE DATASET &#183; 2015&#8211;2025</text>
+
+  <g clip-path="url(#reveal)">
+    <path id="areaPath" fill="url(#area)"/>
+  </g>
+  <path id="linePath" class="drawline" fill="none" stroke="url(#ln)" stroke-width="3.4" stroke-linejoin="round" stroke-linecap="round" pathLength="1" filter="url(#softglow)"/>
+  <g id="points"></g>
+
+  <g id="bars"></g>
+
+  <g id="donutWrap" transform="translate(1300,470)"></g>
+
+  <text x="1216" y="812" class="fadeIn" style="animation-delay:1.2s" text-anchor="middle" fill="#7f93ad" font-family="'Azeret Mono',monospace" font-size="12" letter-spacing="2">2025 SOURCE MIX</text>
+
+  <g id="guide" opacity="0"><line id="guideLine" y1="130" y2="770" stroke="#f7d074" stroke-opacity="0.5" stroke-width="1" stroke-dasharray="4 5"/><circle id="guideDot" r="6" fill="#f7d074"/></g>
+  <g id="tip" opacity="0"><rect x="0" y="0" rx="8" width="150" height="52" fill="#0e1830" stroke="#f2b134" stroke-opacity="0.5"/><text id="tipY" x="14" y="22" fill="#9fb0c6" font-family="'Azeret Mono',monospace" font-size="12"></text><text id="tipV" x="14" y="42" fill="#f7d074" font-family="'Plus Jakarta Sans',sans-serif" font-weight="700" font-size="17"></text></g>
+</svg>
+<a class="badge" href="index.html"><span class="t">Data Viz</span><span class="g">&larr; Gallery</span></a>
+<script>
+(function(){
+  var NS="http://www.w3.org/2000/svg";
+  var data=[["2015",52],["2016",75],["2017",95],["2018",105],["2019",115],["2020",127],["2021",145],["2022",191],["2023",346],["2024",452],["2025",590]];
+  var X0=150,X1=1080,Y0=130,Y1=760,VMAX=620;
+  var n=data.length;
+  function px(i){return X0+(X1-X0)*(i/(n-1));}
+  function py(v){return Y1-(Y1-Y0)*(v/VMAX);}
+  var grid=document.getElementById("grid");
+  for(var g=0;g<=5;g++){
+    var y=Y0+(Y1-Y0)*g/5;
+    var ln=document.createElementNS(NS,"line");
+    ln.setAttribute("x1",X0);ln.setAttribute("x2",X1);ln.setAttribute("y1",y);ln.setAttribute("y2",y);
+    grid.appendChild(ln);
+    var t=document.createElementNS(NS,"text");
+    t.setAttribute("x",X0-14);t.setAttribute("y",y+4);t.setAttribute("text-anchor","end");
+    t.setAttribute("fill","#66788f");t.setAttribute("font-family","'Azeret Mono',monospace");t.setAttribute("font-size","12");
+    t.textContent=Math.round(VMAX*(1-g/5));
+    grid.appendChild(t);
+  }
+  var d="",a="";
+  for(var i=0;i<n;i++){ var x=px(i),y=py(data[i][1]); d+=(i?" L":"M")+x.toFixed(1)+","+y.toFixed(1); }
+  a=d+" L"+px(n-1).toFixed(1)+","+Y1+" L"+px(0).toFixed(1)+","+Y1+" Z";
+  document.getElementById("linePath").setAttribute("d",d);
+  document.getElementById("areaPath").setAttribute("d",a);
+  var pts=document.getElementById("points");
+  for(var i=0;i<n;i++){
+    var x=px(i),y=py(data[i][1]);
+    var c=document.createElementNS(NS,"circle");
+    c.setAttribute("cx",x);c.setAttribute("cy",y);c.setAttribute("r","5.5");
+    c.setAttribute("fill","#0a1120");c.setAttribute("stroke","#f7d074");c.setAttribute("stroke-width","2.6");
+    c.setAttribute("class","pop");c.style.animationDelay=(0.5+i*0.09)+"s";
+    pts.appendChild(c);
+    var tx=document.createElementNS(NS,"text");
+    tx.setAttribute("x",x);tx.setAttribute("y",Y1+28);tx.setAttribute("text-anchor","middle");
+    tx.setAttribute("fill","#66788f");tx.setAttribute("font-family","'Azeret Mono',monospace");tx.setAttribute("font-size","12");
+    tx.textContent=data[i][0];
+    tx.setAttribute("class","fadeIn");tx.style.animationDelay=(0.7+i*0.09)+"s";
+    pts.appendChild(tx);
+  }
+
+  // bars: renewable share of mix per decade-ish (right mini stack)
+  var bars=document.getElementById("bars");
+  var bdata=[["Solar",0.34],["Wind",0.29],["Hydro",0.21],["Other",0.16]];
+  var bx=1150, by0=760, maxH=250, bw=30;
+  for(var i=0;i<bdata.length;i++){
+    var h=bdata[i][1]/0.34*maxH;
+    var r=document.createElementNS(NS,"rect");
+    r.setAttribute("x",bx+i*44);r.setAttribute("rx","6");r.setAttribute("fill","url(#bar)");
+    r.style.width=bw+"px"; r.style.y=by0+"px"; r.style.height="0px";
+    bars.appendChild(r);
+    var target=by0-h;
+    r.style.transition="y .9s cubic-bezier(.3,1,.3,1) "+(0.6+i*0.14)+"s, height .9s cubic-bezier(.3,1,.3,1) "+(0.6+i*0.14)+"s";
+    (function(r,target,h){setTimeout(function(){r.style.y=target+"px";r.style.height=h+"px";},40);})(r,target,h);
+    var lt=document.createElementNS(NS,"text");
+    lt.setAttribute("x",bx+i*44+bw/2);lt.setAttribute("y",by0+22);lt.setAttribute("text-anchor","middle");
+    lt.setAttribute("fill","#66788f");lt.setAttribute("font-family","'Azeret Mono',monospace");lt.setAttribute("font-size","11");
+    lt.textContent=bdata[i][0];
+    lt.setAttribute("class","fadeIn");lt.style.animationDelay=(0.9+i*0.14)+"s";
+    bars.appendChild(lt);
+  }
+
+  // donut
+  var dw=document.getElementById("donutWrap");
+  var R=118, C=2*Math.PI*R;
+  var segs=[{v:0.40,c:"#f2b134"},{v:0.26,c:"#3fe0a2"},{v:0.19,c:"#5b8def"},{v:0.15,c:"#e8862f"}];
+  var off=0;
+  for(var i=0;i<segs.length;i++){
+    var arc=document.createElementNS(NS,"circle");
+    arc.setAttribute("r",R);arc.setAttribute("fill","none");
+    arc.setAttribute("stroke",segs[i].c);arc.setAttribute("stroke-width","30");
+    arc.setAttribute("stroke-dasharray",C.toFixed(2));
+    arc.setAttribute("stroke-dashoffset",(C*(1)).toFixed(2));
+    arc.setAttribute("transform","rotate(-90)");
+    arc.style.setProperty("--off",(C*(1-segs[i].v)).toFixed(2));
+    arc.style.strokeDashoffset=(C).toFixed(2);
+    arc.setAttribute("class","arcdraw"); arc.style.animationDelay=(0.5+i*0.22)+"s";
+    arc.setAttribute("stroke-linecap","butt");
+    // rotate to segment start
+    var rot=-90+ (off/C)*360;
+    arc.setAttribute("transform","rotate("+rot.toFixed(1)+")");
+    dw.appendChild(arc);
+    off+=segs[i].v*C;
+  }
+  var c1=document.createElementNS(NS,"text");
+  c1.setAttribute("text-anchor","middle");c1.setAttribute("y","-6");
+  c1.setAttribute("fill","#eef4fc");c1.setAttribute("font-family","'Plus Jakarta Sans',sans-serif");
+  c1.setAttribute("font-weight","700");c1.setAttribute("font-size","52");c1.setAttribute("id","bigNum");
+  c1.textContent="0"; dw.appendChild(c1);
+  var c2=document.createElementNS(NS,"text");
+  c2.setAttribute("text-anchor","middle");c2.setAttribute("y","26");
+  c2.setAttribute("fill","#7f93ad");c2.setAttribute("font-family","'Azeret Mono',monospace");
+  c2.setAttribute("font-size","13");c2.setAttribute("letter-spacing","2");
+  c2.textContent="% RENEWABLE"; dw.appendChild(c2);
+
+  // count up
+  var start=null;
+  function count(ts){
+    if(!start)start=ts;
+    var p=Math.min(1,(ts-start)/1600);
+    var e=1-Math.pow(1-p,3);
+    c1.textContent=Math.round(70*e)+"%";
+    if(p<1)requestAnimationFrame(count);
+  }
+  requestAnimationFrame(count);
+
+  // hover guide
+  var svg=document.getElementById("stage");
+  var guide=document.getElementById("guide"),gl=document.getElementById("guideLine"),gd=document.getElementById("guideDot");
+  var tip=document.getElementById("tip"),tipY=document.getElementById("tipY"),tipV=document.getElementById("tipV");
+  svg.addEventListener("pointermove",function(e){
+    var rc=svg.getBoundingClientRect();
+    var sx=(e.clientX-rc.left)/rc.width*1600;
+    var sy=(e.clientY-rc.top)/rc.height*900;
+    if(sx<X0-20||sx>X1+20||sy<Y0-40||sy>Y1+40){guide.setAttribute("opacity","0");tip.setAttribute("opacity","0");return;}
+    var fi=(sx-X0)/(X1-X0)*(n-1); var i=Math.round(Math.max(0,Math.min(n-1,fi)));
+    var x=px(i),y=py(data[i][1]);
+    gl.setAttribute("x1",x);gl.setAttribute("x2",x);gd.setAttribute("cx",x);gd.setAttribute("cy",y);
+    tipY.textContent=data[i][0]; tipV.textContent=data[i][1]+" GW";
+    var tX=x+16, tY=y-70; if(tX>X1-160)tX=x-166;
+    tip.setAttribute("transform","translate("+tX+","+tY+")");
+    guide.setAttribute("opacity","1"); tip.setAttribute("opacity","1");
+  },{passive:true});
+  svg.addEventListener("pointerleave",function(){guide.setAttribute("opacity","0");tip.setAttribute("opacity","0");});
+})();
+</script>
+</body>
+</html>

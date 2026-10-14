@@ -1,0 +1,149 @@
+<!-- svg-linedraw — Self-Drawing Mandala Line Art -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Line Draw</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;background:#0d0a07;overflow:hidden}
+  body{font-family:'Space Mono',monospace}
+  #stage{position:fixed;inset:0;width:100vw;height:100vh;display:block}
+  .badge{position:fixed;left:18px;bottom:18px;z-index:10;display:inline-flex;gap:10px;align-items:baseline;
+    padding:7px 14px;border:1px solid rgba(255,222,150,.18);border-radius:999px;background:rgba(20,15,8,.42);
+    -webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);color:rgba(255,236,196,.68);
+    text-decoration:none;font-size:10px;letter-spacing:.16em;text-transform:uppercase;opacity:.7;
+    transition:opacity .4s,border-color .4s}
+  .badge:hover{opacity:1;border-color:rgba(255,222,150,.5)}
+  .badge .t{font-family:'Cormorant Garamond',serif;font-size:16px;letter-spacing:.03em;text-transform:none;color:rgba(255,240,205,.95)}
+  .badge .g{color:rgba(255,236,196,.45)}
+</style>
+</head>
+<body>
+<svg id="stage" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid meet" aria-label="Self-drawing ornamental mandala">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="62%">
+      <stop offset="0%" stop-color="#221708"/>
+      <stop offset="60%" stop-color="#120d06"/>
+      <stop offset="100%" stop-color="#0d0a07"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffe9a8"/>
+      <stop offset="45%" stop-color="#e8b349"/>
+      <stop offset="100%" stop-color="#a86f18"/>
+    </linearGradient>
+    <linearGradient id="ember" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0%" stop-color="#ff8a4c"/>
+      <stop offset="100%" stop-color="#ffd27a"/>
+    </linearGradient>
+    <linearGradient id="jade" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7ef0d0"/>
+      <stop offset="100%" stop-color="#1f8f78"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="3.4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <g id="art" filter="url(#glow)"></g>
+</svg>
+<a class="badge" href="index.html"><span class="t">Line Draw</span><span class="g">&larr; Gallery</span></a>
+<script>
+(function(){
+  var NS="http://www.w3.org/2000/svg";
+  var art=document.getElementById("art");
+  var CX=800, CY=450;
+  var anim=[];
+  function P(d,stroke,w,op){
+    var p=document.createElementNS(NS,"path");
+    p.setAttribute("d",d); p.setAttribute("fill","none");
+    p.setAttribute("stroke",stroke); p.setAttribute("stroke-width",w);
+    p.setAttribute("stroke-linecap","round"); p.setAttribute("stroke-linejoin","round");
+    p.setAttribute("opacity",op==null?1:op);
+    p.setAttribute("pathLength","1");
+    p.style.strokeDasharray="1"; p.style.strokeDashoffset="1";
+    art.appendChild(p); anim.push(p); return p;
+  }
+  function circle(r,stroke,w,op){
+    var p=document.createElementNS(NS,"path");
+    p.setAttribute("d","M"+(CX-r)+","+CY+" a"+r+","+r+" 0 1,0 "+(2*r)+",0 a"+r+","+r+" 0 1,0 "+(-2*r)+",0");
+    p.setAttribute("fill","none"); p.setAttribute("stroke",stroke);
+    p.setAttribute("stroke-width",w); p.setAttribute("opacity",op==null?1:op);
+    p.setAttribute("pathLength","1");
+    p.style.strokeDasharray="1"; p.style.strokeDashoffset="1";
+    art.appendChild(p); anim.push(p); return p;
+  }
+  function petalRing(count,R,scale,stroke,w,op,phase){
+    for(var i=0;i<count;i++){
+      var a=i/count*360+phase;
+      var g=document.createElementNS(NS,"g");
+      g.setAttribute("transform","translate("+CX+","+CY+") rotate("+a+") translate(0,"+(-R)+") scale("+scale+")");
+      var p=document.createElementNS(NS,"path");
+      p.setAttribute("d","M0,0 C 27,-34 27,-88 0,-124 C -27,-88 -27,-34 0,0");
+      p.setAttribute("fill","none"); p.setAttribute("stroke",stroke);
+      p.setAttribute("stroke-width",w); p.setAttribute("stroke-linecap","round");
+      p.setAttribute("opacity",op==null?1:op); p.setAttribute("pathLength","1");
+      p.style.strokeDasharray="1"; p.style.strokeDashoffset="1";
+      g.appendChild(p); art.appendChild(g); anim.push(p);
+    }
+  }
+  function spoke(count,r1,r2,stroke,w,op){
+    for(var i=0;i<count;i++){
+      var a=i/count*Math.PI*2;
+      var x1=CX+Math.cos(a)*r1,y1=CY+Math.sin(a)*r1;
+      var x2=CX+Math.cos(a)*r2,y2=CY+Math.sin(a)*r2;
+      P("M"+x1.toFixed(1)+","+y1.toFixed(1)+" L"+x2.toFixed(1)+","+y2.toFixed(1),stroke,w,op);
+    }
+  }
+  // concentric rings
+  circle(366,"url(#gold)",2.2,0.95);
+  circle(322,"url(#ember)",1.1,0.7);
+  circle(268,"url(#gold)",1.6,0.85);
+  circle(214,"url(#jade)",1.0,0.65);
+  circle(150,"url(#gold)",1.4,0.85);
+  circle(96,"url(#ember)",1.1,0.7);
+  circle(52,"url(#gold)",1.6,0.9);
+  circle(20,"url(#jade)",2.0,0.95);
+  // ornamental petal rings
+  petalRing(24,300,1.00,"url(#gold)",1.5,0.9,0);
+  petalRing(16,228,0.82,"url(#ember)",1.3,0.85,11);
+  petalRing(12,158,0.66,"url(#jade)",1.4,0.85,7.5);
+  petalRing(8,92,0.5,"url(#gold)",1.5,0.9,0);
+  // radial spokes
+  spoke(48,60,362,"url(#gold)",0.8,0.5);
+  spoke(24,20,362,"url(#ember)",0.6,0.35);
+  // decorative inner diamond rosette
+  for(var k=0;k<8;k++){
+    var a=k/8*Math.PI*2+Math.PI/8;
+    var x=CX+Math.cos(a)*140,y=CY+Math.sin(a)*140;
+    P("M"+CX+","+CY+" Q"+(CX+Math.cos(a+0.35)*110)+","+(CY+Math.sin(a+0.35)*110)+" "+x.toFixed(1)+","+y.toFixed(1),
+      "url(#jade)",0.9,0.6);
+  }
+  // ---- animation ----
+  var CYCLE=12000;
+  var last=0;
+  function frame(now){
+    var p=(now%CYCLE)/CYCLE;
+    var n=anim.length;
+    for(var i=0;i<n;i++){
+      var t0=0.04+(i/n)*0.64, dur=0.15;
+      var l=(p-t0)/dur; if(l<0)l=0; if(l>1)l=1;
+      var e=1-Math.pow(1-l,3);
+      anim[i].style.strokeDashoffset=(1-e).toFixed(3);
+    }
+    var fade=p<0.9?1:Math.max(0,1-(p-0.9)/0.1);
+    var rise=p<0.04?p/0.04:1;
+    art.style.opacity=(fade*rise).toFixed(3);
+    art.setAttribute("transform","rotate("+(now/1000*1.6).toFixed(2)+" "+CX+" "+CY+")");
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

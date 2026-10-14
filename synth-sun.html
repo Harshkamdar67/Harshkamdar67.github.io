@@ -1,0 +1,215 @@
+<!-- Concept: Outrun Synth Sun -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Synth Sun</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  html,body{ width:100%; height:100%; overflow:hidden; background:#0b0224; }
+  canvas{ display:block; width:100vw; height:100vh; }
+  .type{
+    position:fixed; left:50%; top:11%; transform:translateX(-50%); z-index:5;
+    text-align:center; pointer-events:none; white-space:nowrap;
+  }
+  .type h1{
+    font-family:'Orbitron', sans-serif; font-weight:900;
+    font-size:clamp(26px,7vw,92px); letter-spacing:.14em; margin:0;
+    background:linear-gradient(180deg,#fff 0%,#9fe9ff 30%,#5a7dff 48%,#ffffff 52%,#ff6ad5 60%,#ff2ea6 100%);
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+    filter:drop-shadow(0 0 22px rgba(255,90,200,.55));
+  }
+  .type p{
+    font-family:'Share Tech Mono', monospace; font-size:clamp(9px,1.3vw,14px);
+    letter-spacing:.72em; color:#8fe6ff; text-transform:uppercase; margin-top:10px;
+    text-shadow:0 0 12px rgba(120,220,255,.9);
+  }
+  .scan{ position:fixed; inset:0; z-index:6; pointer-events:none; opacity:.3;
+    background:repeating-linear-gradient(180deg, rgba(0,0,0,0) 0 2px, rgba(0,0,0,.4) 2px 3px); mix-blend-mode:multiply; }
+  .vig{ position:fixed; inset:0; z-index:6; pointer-events:none;
+    background:radial-gradient(ellipse at 50% 55%, rgba(0,0,0,0) 45%, rgba(0,0,0,.7) 100%); }
+  .badge{ position:fixed; left:14px; bottom:12px; z-index:20;
+    font-family:'Share Tech Mono', monospace; font-size:11px; letter-spacing:.12em;
+    color:rgba(255,150,235,.62); text-transform:uppercase;
+    background:rgba(26,4,46,.5); border:1px solid rgba(255,120,230,.26);
+    padding:6px 10px; border-radius:4px; backdrop-filter:blur(3px); user-select:none; }
+  .badge a{ color:rgba(255,195,250,.95); text-decoration:none; }
+  .badge a:hover{ text-shadow:0 0 8px rgba(255,120,235,.9); }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="type">
+  <h1>NEON DRIVE</h1>
+  <p>highway to the horizon</p>
+</div>
+<div class="scan"></div>
+<div class="vig"></div>
+<div class="badge">Synth Sun &nbsp;<a href="index.html">&larr; Gallery</a></div>
+<script>
+(function(){
+  const cv = document.getElementById('c');
+  const ctx = cv.getContext('2d');
+  let W,H,dpr;
+  function size(){
+    dpr = Math.min(window.devicePixelRatio||1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    cv.width = Math.floor(W*dpr); cv.height = Math.floor(H*dpr);
+    cv.style.width=W+'px'; cv.style.height=H+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  size(); window.addEventListener('resize', size);
+
+  const stars = [];
+  for(let i=0;i<160;i++) stars.push({x:Math.random(), y:Math.random()*0.62, s:Math.random()<0.2?2:1, t:Math.random()*6.28});
+
+  // perspective grid scroll offset
+  let scroll = 0;
+  let speed = 1;
+
+  // pointer = camera sway / boost
+  let px = 0, tpx = 0, boost = 0, tboost = 0;
+  window.addEventListener('mousemove', e=>{ tpx = (e.clientX/W - 0.5); });
+  window.addEventListener('mousedown', ()=>{ tboost = 1; });
+  window.addEventListener('mouseup', ()=>{ tboost = 0; });
+  window.addEventListener('touchstart', ()=>{ tboost = 1; }, {passive:true});
+  window.addEventListener('touchend', ()=>{ tboost = 0; }, {passive:true});
+
+  function draw(now){
+    const t = now*0.001;
+    px += (tpx-px)*0.05; boost += (tboost-boost)*0.06;
+    const horizonY = H*0.60;
+
+    // sky gradient
+    const g = ctx.createLinearGradient(0,0,0,horizonY);
+    g.addColorStop(0, '#0b0224');
+    g.addColorStop(0.45, '#2a0a52');
+    g.addColorStop(0.72, '#7a1a72');
+    g.addColorStop(1, '#ff5c8a');
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,W,horizonY);
+
+    // stars
+    stars.forEach(s=>{
+      const a = 0.25 + 0.75*Math.abs(Math.sin(t*1.4 + s.t));
+      ctx.globalAlpha = a * (1 - s.y/0.72);
+      ctx.fillStyle = '#dff3ff';
+      ctx.fillRect(s.x*W, s.y*horizonY, s.s, s.s);
+    });
+    ctx.globalAlpha = 1;
+
+    // banded sun
+    const sunX = W/2 + px*W*0.06;
+    const sunY = horizonY - H*0.16;
+    const sunR = Math.min(W,H)*0.20;
+    ctx.save();
+    // glow
+    const gg = ctx.createRadialGradient(sunX,sunY, sunR*0.2, sunX,sunY, sunR*2.4);
+    gg.addColorStop(0,'rgba(255,180,80,0.55)');
+    gg.addColorStop(0.4,'rgba(255,90,170,0.30)');
+    gg.addColorStop(1,'rgba(255,60,160,0)');
+    ctx.fillStyle = gg;
+    ctx.beginPath(); ctx.arc(sunX,sunY,sunR*2.4,0,Math.PI*2); ctx.fill();
+
+    // sun disc clipped, with animated bands
+    ctx.beginPath(); ctx.arc(sunX,sunY,sunR,0,Math.PI*2); ctx.clip();
+    const sg = ctx.createLinearGradient(0, sunY-sunR, 0, sunY+sunR);
+    sg.addColorStop(0,'#fff2a8');
+    sg.addColorStop(0.35,'#ffcf4d');
+    sg.addColorStop(0.62,'#ff7ac0');
+    sg.addColorStop(1,'#a02bff');
+    ctx.fillStyle = sg;
+    ctx.fillRect(sunX-sunR, sunY-sunR, sunR*2, sunR*2);
+    // horizontal gaps
+    ctx.fillStyle = 'rgba(11,2,36,1)';
+    const bandH = sunR*0.13;
+    const phase = (scroll*0.6)%(bandH*2);
+    for(let y = sunY - sunR + sunR*0.45; y < sunY+sunR; y += bandH*2){
+      ctx.fillRect(sunX-sunR, y + phase, sunR*2, bandH);
+    }
+    ctx.restore();
+
+    // horizon line glow
+    const hg = ctx.createLinearGradient(0,horizonY-6,0,horizonY+10);
+    hg.addColorStop(0,'rgba(255,120,200,0)');
+    hg.addColorStop(0.5,'rgba(255,140,220,0.85)');
+    hg.addColorStop(1,'rgba(90,220,255,0.0)');
+    ctx.fillStyle = hg;
+    ctx.fillRect(0,horizonY-6,W,16);
+
+    // distant mountain silhouettes
+    ctx.fillStyle = '#160636';
+    ctx.beginPath();
+    ctx.moveTo(0,horizonY);
+    let mx=0;
+    const peaks=[[0.10,0.06],[0.22,0.11],[0.36,0.04],[0.52,0.13],[0.66,0.07],[0.80,0.12],[0.92,0.05],[1.0,0.09]];
+    peaks.forEach(p=>{
+      const x = p[0]*W;
+      ctx.lineTo((mx+x)/2, horizonY - p[1]*H*1.6);
+      ctx.lineTo(x, horizonY);
+      mx = x;
+    });
+    ctx.lineTo(W,horizonY); ctx.closePath(); ctx.fill();
+
+    // floor background
+    ctx.fillStyle = '#0b0224';
+    ctx.fillRect(0,horizonY,W,H-horizonY);
+
+    // perspective grid
+    scroll += (2.2 + boost*7);
+    const vpx = W/2 + px*W*0.10; // vanishing point x sway
+    ctx.lineWidth = 1.4;
+    // radial vertical lines
+    const N = 28;
+    for(let i=-N;i<=N;i++){
+      const xBottom = vpx + i*(W*1.6/N);
+      ctx.strokeStyle = i%2===0 ? 'rgba(120,230,255,0.85)' : 'rgba(255,90,200,0.75)';
+      ctx.beginPath();
+      ctx.moveTo(vpx, horizonY);
+      ctx.lineTo(xBottom, H+40);
+      ctx.stroke();
+    }
+    // horizontal lines with perspective spacing
+    const rows = 22;
+    const off = (scroll % 1);
+    for(let j=0;j<rows;j++){
+      const k = (j+off)/rows;
+      const y = horizonY + (H-horizonY) * Math.pow(k, 2.1);
+      const alpha = Math.min(0.9, k*1.6);
+      ctx.strokeStyle = 'rgba(255,120,220,'+alpha.toFixed(3)+')';
+      ctx.lineWidth = 1 + k*2.2;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(W, y);
+      ctx.stroke();
+    }
+    // glow near vanishing point
+    const vg = ctx.createRadialGradient(vpx,horizonY,2, vpx,horizonY, H*0.5);
+    vg.addColorStop(0,'rgba(255,150,230,0.28)');
+    vg.addColorStop(1,'rgba(255,150,230,0)');
+    ctx.fillStyle = vg;
+    ctx.fillRect(0,horizonY,W,H-horizonY);
+
+    // speed streaks when boosting
+    if(boost>0.02){
+      ctx.strokeStyle = 'rgba(255,255,255,'+(boost*0.5).toFixed(2)+')';
+      ctx.lineWidth = 2;
+      for(let i=0;i<18;i++){
+        const a = (i/18)*Math.PI*2 + t*3;
+        const rr = 40 + ((t*400 + i*60)%(H*0.7));
+        const x1 = vpx + Math.cos(a)*rr, y1 = horizonY + Math.sin(a)*rr*0.5;
+        ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x1+Math.cos(a)*24, y1+Math.sin(a)*12); ctx.stroke();
+      }
+    }
+
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>

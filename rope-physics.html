@@ -1,0 +1,237 @@
+<!-- Concept 36: Verlet Rope — heavy, damped ropes you can grab, drag and whip with the mouse -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verlet Rope</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;background:#03080a}
+  canvas{display:block;width:100vw;height:100vh}
+  .badge{
+    position:fixed;left:14px;bottom:14px;z-index:10;
+    font:600 10px/1.3 'Inter',system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;
+    color:rgba(210,255,235,.62);background:rgba(6,18,16,.42);
+    border:1px solid rgba(110,255,200,.18);padding:7px 12px;border-radius:999px;
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    display:flex;gap:10px;align-items:center;pointer-events:none;white-space:nowrap;
+  }
+  .badge a{pointer-events:auto;color:rgba(130,255,205,.9);text-decoration:none;transition:color .2s}
+  .badge a:hover{color:#fff}
+  .badge .sep{opacity:.35}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="badge"><span>Verlet Rope</span><span class="sep">/</span><a href="index.html">&larr; Gallery</a></div>
+<script>
+(() => {
+  'use strict';
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W = 0, H = 0, DPR = 1;
+
+  const GRAV = 1600;
+  const DAMP = 0.996;
+  const ITER = 26;
+  const N = 46;                 // points per rope
+
+  const ropes = [];
+  const sparks = [];
+  let windT = 0;
+
+  class Rope {
+    constructor(anchorX, anchorY, len, hue) {
+      this.hue = hue;
+      this.pts = [];
+      const seg = len / (N - 1);
+      this.seg = seg;
+      for (let i = 0; i < N; i++) {
+        this.pts.push({ x: anchorX, y: anchorY + i * seg, ox: anchorX, oy: anchorY + i * seg, pinned: i === 0 });
+      }
+      this.anchorX = anchorX; this.anchorY = anchorY;
+    }
+    step(dt) {
+      const dt2 = dt * dt;
+      for (let i = 0; i < N; i++) {
+        const p = this.pts[i];
+        if (p.pinned) { p.ox = p.x; p.oy = p.y; continue; }
+        const vx = (p.x - p.ox) * DAMP;
+        const vy = (p.y - p.oy) * DAMP;
+        p.ox = p.x; p.oy = p.y;
+        const u = i / N;
+        const wx = Math.sin(windT * 1.15 - i * 0.09) * 640 * (0.18 + u)
+                 + Math.sin(windT * 2.6 - i * 0.15) * 300 * u;
+        p.x += vx + wx * dt2;
+        p.y += vy + GRAV * dt2;
+      }
+      for (let k = 0; k < ITER; k++) {
+        for (let i = 0; i < N - 1; i++) {
+          const a = this.pts[i], b = this.pts[i + 1];
+          let dx = b.x - a.x, dy = b.y - a.y;
+          let d = Math.hypot(dx, dy) || 1e-6;
+          const diff = (d - this.seg) / d * 0.5;
+          const ox = dx * diff, oy = dy * diff;
+          if (!a.pinned) { a.x += ox; a.y += oy; }
+          if (!b.pinned) { b.x -= ox; b.y -= oy; }
+        }
+        const p0 = this.pts[0];
+        p0.x = this.anchorX; p0.y = this.anchorY;
+      }
+    }
+    render() {
+      const pts = this.pts;
+      // wide soft glow pass
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < N; i++) ctx.lineTo(pts[i].x, pts[i].y);
+      ctx.strokeStyle = 'hsla(' + this.hue + ',100%,55%,0.14)';
+      ctx.lineWidth = 16;
+      ctx.stroke();
+      // tapered bright pass
+      for (let i = 0; i < N - 1; i++) {
+        const a = pts[i], b = pts[i + 1];
+        const t = i / (N - 1);
+        const spd = Math.hypot(b.x - b.ox, b.y - b.oy);
+        const w = (9 - t * 6.5) * (1 + Math.min(spd * 1.4, 0.7));
+        const light = 58 + Math.min(spd * 90, 32);
+        ctx.strokeStyle = 'hsla(' + (this.hue + t * 40) + ',100%,' + light + '%,' + (0.55 + 0.4 * (1 - t)) + ')';
+        ctx.lineWidth = w;
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+      // anchor
+      ctx.fillStyle = 'hsla(' + this.hue + ',100%,80%,0.95)';
+      ctx.beginPath(); ctx.arc(pts[0].x, pts[0].y, 4.5, 0, 6.2832); ctx.fill();
+      // end weight
+      const end = pts[N - 1];
+      const g = ctx.createRadialGradient(end.x, end.y, 0, end.x, end.y, 22);
+      g.addColorStop(0, 'hsla(' + (this.hue + 40) + ',100%,85%,0.95)');
+      g.addColorStop(1, 'hsla(' + (this.hue + 40) + ',100%,60%,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(end.x, end.y, 22, 0, 6.2832); ctx.fill();
+      ctx.fillStyle = 'hsla(' + (this.hue + 40) + ',100%,92%,1)';
+      ctx.beginPath(); ctx.arc(end.x, end.y, 7, 0, 6.2832); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+    }
+  }
+
+  function build() {
+    ropes.length = 0;
+    const baseY = H * 0.10;
+    const len = Math.min(H * 0.72, W * 0.42);
+    const xs = W < 640 ? [W * 0.5] : [W * 0.28, W * 0.5, W * 0.72];
+    const hues = [165, 195, 280];
+    xs.forEach((x, i) => ropes.push(new Rope(x, baseY, len * (i === 1 ? 1 : 0.82), hues[i % hues.length])));
+  }
+
+  // drag
+  let grab = null; // {rope, idx}
+  const mouse = { x: 0, y: 0 };
+  function evt(e) { const t = e.touches ? e.touches[0] : e; return { x: t.clientX, y: t.clientY }; }
+  function down(e) {
+    const p = evt(e); mouse.x = p.x; mouse.y = p.y;
+    let best = null, bd = 1e9;
+    for (const r of ropes) for (let i = 0; i < N; i++) {
+      const q = r.pts[i];
+      const d = (q.x - p.x) ** 2 + (q.y - p.y) ** 2;
+      if (d < bd) { bd = d; best = { rope: r, idx: i }; }
+    }
+    if (bd < 60 * 60) grab = best;
+    e.preventDefault();
+  }
+  function move(e) {
+    const p = evt(e); mouse.x = p.x; mouse.y = p.y;
+    if (grab) e.preventDefault();
+  }
+  function up() { grab = null; }
+  canvas.addEventListener('mousedown', down);
+  window.addEventListener('mousemove', move);
+  window.addEventListener('mouseup', up);
+  canvas.addEventListener('touchstart', down, { passive: false });
+  window.addEventListener('touchmove', move, { passive: false });
+  window.addEventListener('touchend', up);
+
+  function step(dt) {
+    windT += dt;
+    for (const r of ropes) r.step(dt);
+    if (grab) {
+      const p = grab.rope.pts[grab.idx];
+      if (!p.pinned) { p.x = mouse.x; p.y = mouse.y; }
+    }
+    // sparks on fast-moving segments
+    for (const r of ropes) {
+      for (let i = 1; i < N; i++) {
+        const p = r.pts[i];
+        const spd = Math.hypot(p.x - p.ox, p.y - p.oy);
+        if (spd > 0.9 && Math.random() < 0.25 && sparks.length < 400) {
+          sparks.push({ x: p.x, y: p.y, vx: (Math.random() - 0.5) * 40, vy: (Math.random() - 0.5) * 40, life: 1, hue: r.hue });
+        }
+      }
+    }
+  }
+
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width = Math.floor(W * DPR);
+    canvas.height = Math.floor(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.fillStyle = 'rgba(3,8,10,1)'; ctx.fillRect(0, 0, W, H);
+    build();
+  }
+
+  function render(dt) {
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = 'rgba(3,8,10,0.16)';
+    ctx.fillRect(0, 0, W, H);
+    // faint ceiling glow
+    const cg = ctx.createLinearGradient(0, 0, 0, H * 0.25);
+    cg.addColorStop(0, 'rgba(80,255,190,0.07)');
+    cg.addColorStop(1, 'rgba(80,255,190,0)');
+    ctx.fillStyle = cg; ctx.fillRect(0, 0, W, H * 0.25);
+
+    for (const r of ropes) r.render();
+
+    // sparks
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = sparks.length - 1; i >= 0; i--) {
+      const s = sparks[i];
+      s.x += s.vx * dt; s.y += s.vy * dt;
+      s.vy += 40 * dt; s.life -= dt * 1.6;
+      if (s.life <= 0) { sparks.splice(i, 1); continue; }
+      ctx.fillStyle = 'hsla(' + s.hue + ',100%,75%,' + (s.life * 0.7) + ')';
+      ctx.beginPath(); ctx.arc(s.x, s.y, 1.6 * s.life + 0.4, 0, 6.2832); ctx.fill();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  const FIXED = 1 / 120;
+  let acc = 0, last = performance.now();
+  function frame(now) {
+    let dt = (now - last) / 1000; last = now;
+    if (dt > 0.05) dt = 0.05;
+    acc += dt;
+    let guard = 0;
+    while (acc >= FIXED && guard < 8) { step(FIXED); acc -= FIXED; guard++; }
+    if (guard >= 8) acc = 0;
+    render(Math.min(dt, 0.05));
+    requestAnimationFrame(frame);
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

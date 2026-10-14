@@ -1,0 +1,145 @@
+<!-- Lightning — branching electric arcs cracking across a brooding storm sky -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lightning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500&display=swap" rel="stylesheet">
+<style>
+  html,body{margin:0;height:100%;background:#000;overflow:hidden;}
+  #c{display:block;width:100vw;height:100vh;}
+  .badge{position:fixed;left:16px;bottom:14px;z-index:9;font-family:'Inter',system-ui,sans-serif;
+    font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:rgba(215,225,255,.5);
+    background:rgba(6,10,22,.32);border:1px solid rgba(150,180,255,.13);border-radius:999px;
+    padding:6px 12px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:color .4s,border-color .4s;}
+  .badge:hover{color:rgba(235,240,255,.92);border-color:rgba(150,180,255,.32);}
+  .badge a{color:inherit;text-decoration:none;}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="badge">Lightning&nbsp; ·&nbsp; <a href="index.html">&larr; Gallery</a></div>
+<script>
+(function(){
+  var canvas=document.getElementById('c');
+  var ctx=canvas.getContext('2d');
+  var W=0,H=0,dpr=Math.min(window.devicePixelRatio||1,2);
+  var sky=document.createElement('canvas');
+  var skyx=sky.getContext('2d');
+
+  function resize(){
+    W=window.innerWidth;H=window.innerHeight;
+    canvas.width=Math.floor(W*dpr);canvas.height=Math.floor(H*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    buildSky();
+  }
+  function buildSky(){
+    sky.width=Math.floor(W*dpr);sky.height=Math.floor(H*dpr);
+    skyx.setTransform(dpr,0,0,dpr,0,0);
+    var g=skyx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,'#05070f');
+    g.addColorStop(0.45,'#0b1224');
+    g.addColorStop(0.72,'#141a2e');
+    g.addColorStop(1,'#1b1d24');
+    skyx.fillStyle=g;skyx.fillRect(0,0,W,H);
+    // low clouds — layered soft blobs
+    for(var i=0;i<26;i++){
+      var cx=Math.random()*W, cy=H*(0.25+Math.random()*0.55);
+      var r=H*(0.08+Math.random()*0.22);
+      var rg=skyx.createRadialGradient(cx,cy,0,cx,cy,r);
+      var a=0.05+Math.random()*0.06;
+      rg.addColorStop(0,'rgba(30,38,60,'+a+')');
+      rg.addColorStop(1,'rgba(30,38,60,0)');
+      skyx.fillStyle=rg;skyx.beginPath();skyx.arc(cx,cy,r,0,6.2832);skyx.fill();
+    }
+  }
+
+  var bolts=[]; var flash=0; var nextBolt=0.6;
+  var mx=0.5, tmx=0.5;
+
+  function makeBranch(x,y,ang,len,width,depth,out){
+    var pts=[x,y];var cx=x,cy=y,ca=ang;
+    var steps=Math.max(4,Math.floor(len/11));
+    for(var i=0;i<steps;i++){
+      ca+=(Math.random()-0.5)*0.5;
+      cx+=Math.cos(ca)*11;cy+=Math.sin(ca)*11;
+      pts.push(cx,cy);
+      if(depth>0 && Math.random()<0.07){
+        makeBranch(cx,cy,ca+(Math.random()<0.5?-1:1)*(0.35+Math.random()*0.6),
+                   len*0.5,width*0.6,depth-1,out);
+      }
+    }
+    out.push({p:pts,w:width});
+  }
+
+  function spawnBolt(){
+    var bx=(mx*0.6+0.2+Math.random()*0.2)*W;
+    var strokes=[];
+    makeBranch(bx, -20, Math.PI/2+(Math.random()-0.5)*0.6,
+               H*(0.55+Math.random()*0.4), 1.0, 3, strokes);
+    bolts.push({s:strokes,life:1,max:0.55+Math.random()*0.35,seed:Math.random()});
+    flash=Math.min(1,flash+0.5+Math.random()*0.4);
+  }
+
+  window.addEventListener('mousemove',function(e){tmx=e.clientX/window.innerWidth;});
+  window.addEventListener('touchmove',function(e){if(e.touches[0])tmx=e.touches[0].clientX/window.innerWidth;},{passive:true});
+
+  function drawBolt(b,alpha){
+    ctx.lineCap='round';ctx.lineJoin='round';
+    for(var s=0;s<b.s.length;s++){
+      var st=b.s[s],p=st.p;
+      // wide atmospheric glow
+      ctx.globalCompositeOperation='lighter';
+      ctx.strokeStyle='rgba(90,140,255,'+(0.10*alpha)+')';
+      ctx.lineWidth=st.w*14;stroke(p);
+      ctx.strokeStyle='rgba(140,180,255,'+(0.22*alpha)+')';
+      ctx.lineWidth=st.w*5;stroke(p);
+      ctx.strokeStyle='rgba(220,235,255,'+(0.75*alpha)+')';
+      ctx.lineWidth=st.w*1.8;stroke(p);
+      ctx.strokeStyle='rgba(255,255,255,'+(0.95*alpha)+')';
+      ctx.lineWidth=st.w*0.7;stroke(p);
+    }
+  }
+  function stroke(p){
+    ctx.beginPath();ctx.moveTo(p[0],p[1]);
+    for(var i=2;i<p.length;i+=2)ctx.lineTo(p[i],p[i+1]);
+    ctx.stroke();
+  }
+
+  var last=performance.now();
+  function frame(now){
+    var dt=Math.min(0.05,(now-last)/1000);last=now;
+    mx+=(tmx-mx)*0.05;
+    nextBolt-=dt;
+    if(nextBolt<=0){spawnBolt();nextBolt=0.5+Math.random()*1.6;}
+
+    ctx.globalCompositeOperation='source-over';
+    ctx.drawImage(sky,0,0,W,H);
+
+    flash*=Math.pow(0.02,dt);
+    if(flash>0.005){
+      ctx.globalCompositeOperation='lighter';
+      var fg=ctx.createRadialGradient(mx*W,H*0.4,0,mx*W,H*0.4,H*1.1);
+      fg.addColorStop(0,'rgba(150,180,255,'+(flash*0.28)+')');
+      fg.addColorStop(1,'rgba(150,180,255,0)');
+      ctx.fillStyle=fg;ctx.fillRect(0,0,W,H);
+    }
+
+    for(var i=bolts.length-1;i>=0;i--){
+      var b=bolts[i];
+      b.life-=dt/b.max;
+      if(b.life<=0){bolts.splice(i,1);continue;}
+      var flick=0.55+0.45*Math.random();
+      drawBolt(b,Math.max(0,b.life)*flick);
+    }
+    ctx.globalCompositeOperation='source-over';
+    requestAnimationFrame(frame);
+  }
+  resize();window.addEventListener('resize',resize);
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

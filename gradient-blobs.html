@@ -1,0 +1,92 @@
+<!-- Concept 51 · Gradient Blobs — organic morphing gradient shapes, heavy blur and screen blending -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gradient Blobs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,200;9..144,500&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%}
+  body{
+    background:radial-gradient(130% 130% at 50% -10%,#12142e 0%,#070811 55%,#030408 100%);
+    color:#f4f1ea;font-family:"Fraunces",Georgia,serif;overflow:hidden;
+  }
+  .field{position:fixed;inset:-18vmax;filter:blur(72px) saturate(150%);will-change:transform}
+  .blob{
+    position:absolute;width:56vmax;height:56vmax;mix-blend-mode:screen;opacity:.9;
+    border-radius:42% 58% 63% 37% / 45% 40% 60% 55%;
+    will-change:transform,border-radius;
+  }
+  .b1{top:4%;left:2%;
+    background:radial-gradient(circle at 35% 35%,#ff5f6d,#c2185b 45%,transparent 72%);
+    animation:drift1 24s ease-in-out infinite alternate,morph 15s ease-in-out infinite}
+  .b2{top:32%;left:44%;width:50vmax;height:50vmax;
+    background:radial-gradient(circle at 60% 40%,#00e5ff,#1565c0 48%,transparent 74%);
+    animation:drift2 28s ease-in-out infinite alternate,morph 18s ease-in-out infinite reverse}
+  .b3{top:56%;left:8%;width:46vmax;height:46vmax;
+    background:radial-gradient(circle at 45% 55%,#b388ff,#6200ea 50%,transparent 76%);
+    animation:drift3 26s ease-in-out infinite alternate,morph 13s ease-in-out infinite}
+  .b4{top:2%;left:58%;width:44vmax;height:44vmax;
+    background:radial-gradient(circle at 50% 50%,#ffd54f,#ff6f00 52%,transparent 78%);
+    animation:drift4 30s ease-in-out infinite alternate,morph 20s ease-in-out infinite reverse}
+  .b5{top:60%;left:56%;width:48vmax;height:48vmax;
+    background:radial-gradient(circle at 40% 60%,#1de9b6,#00897b 50%,transparent 76%);
+    animation:drift2 22s ease-in-out infinite alternate-reverse,morph 16s ease-in-out infinite}
+  @keyframes drift1{from{transform:translate3d(-6vmax,-4vmax,0) scale(1)}to{transform:translate3d(14vmax,10vmax,0) scale(1.25)}}
+  @keyframes drift2{from{transform:translate3d(6vmax,4vmax,0) scale(1.1)}to{transform:translate3d(-16vmax,-8vmax,0) scale(.85)}}
+  @keyframes drift3{from{transform:translate3d(-8vmax,6vmax,0) scale(.9)}to{transform:translate3d(10vmax,-14vmax,0) scale(1.2)}}
+  @keyframes drift4{from{transform:translate3d(4vmax,-6vmax,0) scale(1.15)}to{transform:translate3d(-10vmax,12vmax,0) scale(.9)}}
+  @keyframes morph{
+    0%{border-radius:42% 58% 63% 37% / 45% 40% 60% 55%}
+    33%{border-radius:63% 37% 40% 60% / 58% 62% 38% 42%}
+    66%{border-radius:38% 62% 55% 45% / 40% 55% 45% 60%}
+    100%{border-radius:42% 58% 63% 37% / 45% 40% 60% 55%}
+  }
+  .grain{position:fixed;inset:0;pointer-events:none;opacity:.16;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>")}
+  .vignette{position:fixed;inset:0;pointer-events:none;
+    background:radial-gradient(120% 100% at 50% 50%,transparent 40%,rgba(3,4,8,.75) 100%)}
+  .copy{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;
+    mix-blend-mode:overlay;pointer-events:none;z-index:5}
+  .copy h1{font-weight:200;font-size:clamp(3rem,13vw,11rem);letter-spacing:.06em;line-height:.92;
+    color:#fff;text-shadow:0 0 60px rgba(255,255,255,.35)}
+  .copy p{margin-top:1.2rem;font-family:"Space Mono",monospace;font-size:clamp(.6rem,1.1vw,.85rem);
+    letter-spacing:.55em;text-transform:uppercase;color:#fff;opacity:.85}
+  .badge{position:fixed;bottom:1.1rem;left:1.1rem;z-index:20;font-family:"Space Mono",monospace;
+    font-size:.62rem;letter-spacing:.16em;text-transform:uppercase;
+    background:rgba(8,10,20,.42);border:1px solid rgba(255,255,255,.16);border-radius:999px;
+    padding:.5rem .85rem;backdrop-filter:blur(8px);color:rgba(255,255,255,.72)}
+  .badge a{color:#fff;text-decoration:none;opacity:.9}
+  .badge a:hover{opacity:1;text-decoration:underline}
+</style>
+</head>
+<body>
+  <div class="field" id="field">
+    <div class="blob b1"></div>
+    <div class="blob b2"></div>
+    <div class="blob b3"></div>
+    <div class="blob b4"></div>
+    <div class="blob b5"></div>
+  </div>
+  <div class="vignette"></div>
+  <div class="grain"></div>
+  <div class="copy"><h1>BLOOM</h1><p>chromatic drift</p></div>
+  <div class="badge">Gradient Blobs &nbsp;·&nbsp; <a href="index.html">&larr; Gallery</a></div>
+  <script>
+    const field=document.getElementById('field');
+    let tx=0,ty=0,cx=0,cy=0;
+    addEventListener('pointermove',e=>{
+      tx=(e.clientX/innerWidth-.5); ty=(e.clientY/innerHeight-.5);
+    },{passive:true});
+    (function loop(){
+      cx+=(tx-cx)*.05; cy+=(ty-cy)*.05;
+      field.style.transform=`translate3d(${cx*6}vmax,${cy*6}vmax,0)`;
+      requestAnimationFrame(loop);
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,174 @@
+<!-- Concept 33: Pendulum Wave — many pendulums of increasing length unfolding travelling wave patterns -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pendulum Wave</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;background:#04060d}
+  canvas{display:block;width:100vw;height:100vh}
+  .badge{
+    position:fixed;left:14px;bottom:14px;z-index:10;
+    font:600 10px/1.3 'Inter',system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;
+    color:rgba(210,225,255,.62);background:rgba(8,12,26,.42);
+    border:1px solid rgba(120,170,255,.18);padding:7px 12px;border-radius:999px;
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    display:flex;gap:10px;align-items:center;pointer-events:none;white-space:nowrap;
+  }
+  .badge a{pointer-events:auto;color:rgba(130,200,255,.9);text-decoration:none;transition:color .2s}
+  .badge a:hover{color:#fff}
+  .badge .sep{opacity:.35}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="badge"><span>Pendulum Wave</span><span class="sep">/</span><a href="index.html">&larr; Gallery</a></div>
+<script>
+(() => {
+  'use strict';
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W = 0, H = 0, DPR = 1;
+
+  const N = 25;
+  const G = 9.81;
+  const AMP = 0.42;
+  const DAMPING = 0.0;   // near-frictionless so patterns recur
+
+  let pivots = [], pends = [];
+  let Lmin = 0, Lmax = 0;
+  let t = 0;
+
+  function build() {
+    pends = []; pivots = [];
+    const margin = Math.max(24, W * 0.06);
+    const usable = W - margin * 2;
+    const pivotY = H * 0.14;
+    // common cycle time so lengths give exact integer oscillation counts
+    const maxLen = Math.min(H * 0.66, usable * 0.9);
+    Lmax = maxLen;
+    const nMin = 22;                 // oscillations of the longest pendulum per cycle
+    const Tc = 2 * Math.PI * Math.sqrt(Lmax / G) * nMin;
+    for (let i = 0; i < N; i++) {
+      const n = nMin + i;            // integer oscillation count -> classic wave
+      const T = Tc / n;
+      const L = G * (T / (2 * Math.PI)) ** 2;
+      const x = margin + (usable) * (i / (N - 1));
+      pivots.push({ x, y: pivotY });
+      pends.push({ L, theta: AMP, omega: 0, x, y: pivotY });
+    }
+    Lmin = Math.min(...pends.map(p => p.L));
+  }
+
+  function step(dt) {
+    t += dt;
+    for (const p of pends) {
+      const alpha = -(G / p.L) * Math.sin(p.theta) - DAMPING * p.omega;
+      p.omega += alpha * dt;
+      p.theta += p.omega * dt;
+    }
+  }
+
+  function reset() { for (const p of pends) { p.theta = AMP; p.omega = 0; } t = 0; }
+
+  // interaction: click / tap re-releases the wave in unison
+  canvas.addEventListener('mousedown', reset);
+  canvas.addEventListener('touchstart', e => { reset(); e.preventDefault(); }, { passive: false });
+
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width = Math.floor(W * DPR);
+    canvas.height = Math.floor(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    build();
+  }
+
+  function bobPos(p) {
+    return { x: p.x + Math.sin(p.theta) * p.L, y: p.y + Math.cos(p.theta) * p.L };
+  }
+
+  function render() {
+    ctx.fillStyle = 'rgba(4,6,13,0.32)';
+    ctx.fillRect(0, 0, W, H);
+
+    // header line of pivots
+    ctx.globalCompositeOperation = 'lighter';
+    const gy = pivots[0].y;
+    const hg = ctx.createLinearGradient(0, gy - 40, 0, gy + 40);
+    hg.addColorStop(0, 'rgba(90,150,255,0)');
+    hg.addColorStop(0.5, 'rgba(90,150,255,0.10)');
+    hg.addColorStop(1, 'rgba(90,150,255,0)');
+    ctx.fillStyle = hg; ctx.fillRect(0, gy - 40, W, 80);
+
+    // rods
+    for (let i = 0; i < N; i++) {
+      const p = pends[i];
+      const b = bobPos(p);
+      const h = i / (N - 1);
+      const hue = 200 - h * 90; // cyan -> violet/magenta
+      ctx.strokeStyle = 'hsla(' + hue + ',85%,70%,0.30)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+    }
+
+    // connecting wave curve through bobs
+    ctx.beginPath();
+    for (let i = 0; i < N; i++) {
+      const b = bobPos(pends[i]);
+      if (i === 0) ctx.moveTo(b.x, b.y); else ctx.lineTo(b.x, b.y);
+    }
+    ctx.strokeStyle = 'rgba(150,220,255,0.18)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    // bobs
+    for (let i = 0; i < N; i++) {
+      const p = pends[i];
+      const b = bobPos(p);
+      const h = i / (N - 1);
+      const hue = 200 - h * 90;
+      const spd = Math.min(Math.abs(p.omega) / 6, 1);
+      const r = 5 + spd * 2.2;
+      // glow
+      const g = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, r * 4.5);
+      g.addColorStop(0, 'hsla(' + hue + ',100%,75%,0.9)');
+      g.addColorStop(0.35, 'hsla(' + hue + ',100%,62%,0.30)');
+      g.addColorStop(1, 'hsla(' + hue + ',100%,60%,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(b.x, b.y, r * 4.5, 0, 6.2832); ctx.fill();
+      // core
+      ctx.fillStyle = 'hsla(' + hue + ',100%,' + (82 + spd * 12) + '%,0.98)';
+      ctx.beginPath(); ctx.arc(b.x, b.y, r, 0, 6.2832); ctx.fill();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  const FIXED = 1 / 240;
+  let acc = 0, last = performance.now();
+  function frame(now) {
+    let dt = (now - last) / 1000; last = now;
+    if (dt > 0.05) dt = 0.05;
+    acc += dt;
+    let guard = 0;
+    while (acc >= FIXED && guard < 12) { step(FIXED); acc -= FIXED; guard++; }
+    if (guard >= 12) acc = 0;
+    render();
+    requestAnimationFrame(frame);
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

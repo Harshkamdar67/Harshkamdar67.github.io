@@ -1,0 +1,163 @@
+<!-- CONCEPT: Particle Clock — digits assembled from ~6,000 particles that stream between glyph targets every second -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Particle Clock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500&family=Space+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;background:#04060a;color:#cfe9ff}
+  canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh}
+  #badge{
+    position:fixed;left:16px;bottom:14px;z-index:10;
+    font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.14em;
+    color:rgba(160,200,240,.55);text-transform:uppercase;
+    display:flex;gap:10px;align-items:center;pointer-events:auto;
+  }
+  #badge a{color:rgba(160,200,240,.55);text-decoration:none;border-bottom:1px solid rgba(160,200,240,.22)}
+  #badge a:hover{color:#8fe4ff}
+  #badge .dot{width:4px;height:4px;border-radius:50%;background:#2fd4ff;box-shadow:0 0 8px #2fd4ff}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="badge"><span class="dot"></span><span>Particle Clock</span><span>&middot;</span><a href="index.html">&larr; Gallery</a></div>
+<script>
+(()=>{
+  const cvs=document.getElementById('c'), ctx=cvs.getContext('2d',{alpha:false});
+  let W=0,H=0,DPR=1;
+  const N=6000;                    // particle count
+  const parts=[];                  // {x,y,vx,vy,tx,ty,sz,hue}
+  // offscreen mask canvas used to sample glyph pixels
+  const off=document.createElement('canvas');
+  const octx=off.getContext('2d');
+
+  function resize(){
+    DPR=Math.min(window.devicePixelRatio||1,2);
+    W=window.innerWidth; H=window.innerHeight;
+    cvs.width=Math.floor(W*DPR); cvs.height=Math.floor(H*DPR);
+    cvs.style.width=W+'px'; cvs.style.height=H+'px';
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    buildTargets(currentString());
+  }
+
+  // sample points on a text string laid out to fit width
+  let txs=new Float32Array(N), tys=new Float32Array(N), tvalid=new Uint8Array(N);
+
+  function layoutPoints(str){
+    // choose font size so string spans ~78% of width
+    const maxW=W*0.86;
+    let fs=Math.min(H*0.5, 900);
+    off.width=Math.max(2,Math.floor(W)); off.height=Math.max(2,Math.floor(H*0.5));
+    octx.font=`700 ${fs}px Inter, system-ui, sans-serif`;
+    let w=octx.measureText(str).width;
+    if(w>maxW){ fs*=maxW/w; }
+    octx.font=`700 ${fs}px Inter, system-ui, sans-serif`;
+    const metrics=octx.measureText(str);
+    const textW=metrics.width;
+    octx.fillStyle='#fff'; octx.textAlign='left'; octx.textBaseline='middle';
+    octx.clearRect(0,0,off.width,off.height);
+    octx.fillText(str,(off.width-textW)/2, off.height/2);
+    const data=octx.getImageData(0,0,off.width,off.height).data;
+    // collect candidate pixels
+    const step=Math.max(1,Math.round(Math.sqrt((off.width*off.height)/ (N*7))));
+    const pts=[];
+    for(let y=0;y<off.height;y+=step){
+      for(let x=0;x<off.width;x+=step){
+        const a=data[(y*off.width+x)*4+3];
+        if(a>128) pts.push(x + (off.width>0?0:0), y);
+      }
+    }
+    return {pts, offW:off.width, offH:off.height};
+  }
+
+  function assignPoints(str){
+    const {pts, offW, offH}=layoutPoints(str);
+    const m=pts.length/2;
+    const yShift = (H - offH)/2;      // offscreen was H*0.5 tall, centered vertically
+    if(m===0){ tvalid.fill(0); return; }
+    for(let i=0;i<N;i++){
+      const j=(i%m)*2;
+      const px=pts[j], py=pts[j+1];
+      // jitter to fill more particles than points, tiny scatter
+      txs[i]=px + (Math.random()-0.5)*1.2;
+      tys[i]=py + yShift + (Math.random()-0.5)*1.2;
+      tvalid[i]=1;
+    }
+  }
+
+  function currentString(){
+    const d=new Date();
+    const hh=String(d.getHours()).padStart(2,'0');
+    const mm=String(d.getMinutes()).padStart(2,'0');
+    const ss=String(d.getSeconds()).padStart(2,'0');
+    return hh+':'+mm+':'+ss;
+  }
+
+  function buildTargets(str){ assignPoints(str); }
+
+  function init(){
+    for(let i=0;i<N;i++){
+      parts.push({
+        x:Math.random()*W, y:Math.random()*H,
+        vx:0, vy:0,
+        sz:Math.random()<0.15?1.9:1.1,
+        hue: 188 + Math.random()*26
+      });
+    }
+  }
+
+  let lastStr=currentString();
+  let flash=0;
+
+  function frame(t){
+    const str=currentString();
+    if(str!==lastStr){ lastStr=str; buildTargets(str); flash=1; }
+    flash*=0.92;
+
+    // fade background
+    ctx.fillStyle='rgba(4,6,10,0.44)';
+    ctx.fillRect(0,0,W,H);
+
+    ctx.globalCompositeOperation='lighter';
+    for(let i=0;i<parts.length;i++){
+      const p=parts[i];
+      if(tvalid[i]){
+        const dx=txs[i]-p.x, dy=tys[i]-p.y;
+        p.vx += dx*0.16; p.vy += dy*0.16;
+      } else {
+        p.vx += (W*0.5 - p.x)*0.002;
+        p.vy += (H*0.5 - p.y)*0.002;
+      }
+      p.vx*=0.78; p.vy*=0.78;
+      p.x+=p.vx; p.y+=p.vy;
+      const sp=Math.min(1,(Math.abs(p.vx)+Math.abs(p.vy))*0.10);
+      const a=0.5 + sp*0.5;
+      const hue=p.hue;
+      ctx.fillStyle=`hsla(${hue},100%,${60+sp*24}%,${a})`;
+      const s=p.sz + sp*1.4;
+      ctx.fillRect(p.x-s*0.5,p.y-s*0.5,s,s);
+    }
+    ctx.globalCompositeOperation='source-over';
+
+    // subtle vignette + scanline sheen
+    const g=ctx.createRadialGradient(W/2,H/2,H*0.15,W/2,H/2,H*0.75);
+    g.addColorStop(0,'rgba(0,0,0,0)');
+    g.addColorStop(1,'rgba(0,0,0,0.55)');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+    requestAnimationFrame(frame);
+  }
+
+  window.addEventListener('resize',resize);
+  resize();
+  init();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

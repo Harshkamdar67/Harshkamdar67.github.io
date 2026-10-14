@@ -1,0 +1,247 @@
+<!-- Concept 37: Domino Chain — a cascade of toppling dominoes running along a wavy track, click to push -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Domino Chain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;background:#0a0a10}
+  canvas{display:block;width:100vw;height:100vh}
+  .badge{
+    position:fixed;left:14px;bottom:14px;z-index:10;
+    font:600 10px/1.3 'Inter',system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;
+    color:rgba(255,235,205,.66);background:rgba(22,16,8,.42);
+    border:1px solid rgba(255,190,110,.2);padding:7px 12px;border-radius:999px;
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    display:flex;gap:10px;align-items:center;pointer-events:none;white-space:nowrap;
+  }
+  .badge a{pointer-events:auto;color:rgba(255,200,120,.92);text-decoration:none;transition:color .2s}
+  .badge a:hover{color:#fff}
+  .badge .sep{opacity:.35}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="badge"><span>Domino Chain</span><span class="sep">/</span><a href="index.html">&larr; Gallery</a></div>
+<script>
+(() => {
+  'use strict';
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W = 0, H = 0, DPR = 1;
+
+  const A = 16.5;          // toppling angular acceleration scale
+  const DAMP = 0.35;       // angular damping
+  const THETA_MAX = 1.30;  // roughly flat
+  const CONTACT = 0.16;    // angle at which a domino starts pushing the next
+  const KICK = 3.2;
+
+  let dominoes = [];
+  let h = 46, w = 15, spacing = 26;
+  let resetTimer = 0, started = false, startTimer = 1.2;
+
+  function build() {
+    dominoes = [];
+    h = Math.max(30, Math.min(H * 0.13, W * 0.055));
+    w = h * 0.30;
+    spacing = h * 0.56;
+    const groundY = H * 0.80;
+    const amp = H * 0.085;
+    const margin = Math.max(40, W * 0.05);
+    const len = W - margin * 2;
+    const count = Math.max(24, Math.floor(len / spacing));
+
+    for (let i = 0; i < count; i++) {
+      const u = i / (count - 1);
+      const x = margin + u * len;
+      // wavy ground
+      const y = groundY - amp * Math.sin(u * Math.PI * 3.0) - amp * 0.35 * Math.sin(u * Math.PI * 7.0);
+      // tangent from numeric derivative
+      const du = 0.001;
+      const u2 = Math.min(1, u + du);
+      const x2 = margin + u2 * len;
+      const y2 = groundY - amp * Math.sin(u2 * Math.PI * 3.0) - amp * 0.35 * Math.sin(u2 * Math.PI * 7.0);
+      const tx = x2 - x, ty = y2 - y;
+      const tl = Math.hypot(tx, ty) || 1;
+      dominoes.push({ x, y, fx: tx / tl, fy: ty / tl, theta: 0, omega: 0, i, down: false });
+    }
+  }
+
+  function axis(d) {
+    // unit vector along domino length: upright -> (0,-1); toppling -> toward forward tangent
+    const c = Math.cos(d.theta), s = Math.sin(d.theta);
+    const ux = c * 0 + s * d.fx;
+    const uy = c * -1 + s * d.fy;
+    const l = Math.hypot(ux, uy) || 1;
+    return { ux: ux / l, uy: uy / l };
+  }
+
+  function step(dt) {
+    if (!started) {
+      startTimer -= dt;
+      if (startTimer <= 0) { started = true; kick(0); }
+    }
+
+    for (let i = 0; i < dominoes.length; i++) {
+      const d = dominoes[i];
+      if (d.theta >= THETA_MAX) { d.theta = THETA_MAX; d.omega = 0; d.down = true; continue; }
+      if (d.theta <= 0 && d.omega <= 0 && !d.down) continue; // standing still
+      const alpha = A * Math.sin(Math.max(d.theta, 0.02)) - DAMP * d.omega;
+      d.omega += alpha * dt;
+      d.theta += d.omega * dt;
+      if (d.theta < 0) { d.theta = 0; d.omega = 0; }
+      // push the next one
+      if (d.theta > CONTACT && i + 1 < dominoes.length) {
+        const n = dominoes[i + 1];
+        if (!n.down && n.theta < CONTACT && n.omega <= 0.01) {
+          n.omega = Math.max(n.omega, KICK * (0.5 + 0.5 * Math.min(d.omega, 2)));
+        }
+      }
+    }
+
+    // completion detection
+    if (started) {
+      let allDown = true;
+      for (const d of dominoes) if (!d.down) { allDown = false; break; }
+      if (allDown) {
+        resetTimer += dt;
+        if (resetTimer > 3.0) { reset(); }
+      }
+    }
+  }
+
+  function kick(i) {
+    const d = dominoes[i];
+    if (d && !d.down) d.omega = KICK;
+  }
+
+  function reset() {
+    for (const d of dominoes) { d.theta = 0; d.omega = 0; d.down = false; }
+    resetTimer = 0; started = false; startTimer = 1.6;
+  }
+
+  // interaction
+  function evt(e) { const t = e.touches ? e.touches[0] : e; return { x: t.clientX, y: t.clientY }; }
+  function tap(e) {
+    const p = evt(e);
+    // nearest standing domino
+    let best = -1, bd = 1e9;
+    for (let i = 0; i < dominoes.length; i++) {
+      const d = dominoes[i];
+      if (d.down) continue;
+      const dist = (d.x - p.x) ** 2 + (d.y - h * 0.5 - p.y) ** 2;
+      if (dist < bd) { bd = dist; best = i; }
+    }
+    if (best >= 0 && bd < (h * 2.2) ** 2) { started = true; kick(best); }
+    else reset();
+    e.preventDefault();
+  }
+  canvas.addEventListener('mousedown', tap);
+  canvas.addEventListener('touchstart', tap, { passive: false });
+
+  function render() {
+    ctx.fillStyle = 'rgba(10,10,16,0.35)';
+    ctx.fillRect(0, 0, W, H);
+
+    // track line under dominoes
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.beginPath();
+    for (let i = 0; i < dominoes.length; i++) {
+      const d = dominoes[i];
+      if (i === 0) ctx.moveTo(d.x, d.y); else ctx.lineTo(d.x, d.y);
+    }
+    ctx.strokeStyle = 'rgba(255,180,90,0.20)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // glow floor
+    const fg = ctx.createLinearGradient(0, H * 0.55, 0, H);
+    fg.addColorStop(0, 'rgba(255,150,60,0)');
+    fg.addColorStop(1, 'rgba(255,150,60,0.05)');
+    ctx.fillStyle = fg; ctx.fillRect(0, H * 0.55, W, H * 0.45);
+    ctx.globalCompositeOperation = 'source-over';
+
+    // dominoes (draw far-to-near = right-to-left so overlap reads)
+    for (let i = dominoes.length - 1; i >= 0; i--) {
+      const d = dominoes[i];
+      const { ux, uy } = axis(d);
+      const px = -uy, py = ux; // perpendicular
+      const hw = w * 0.5;
+      const bx = d.x, by = d.y;
+      const tx = bx + ux * h, ty = by + uy * h;
+
+      // shadow
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.beginPath();
+      ctx.ellipse(bx, by + 2, w * 0.9, w * 0.32, 0, 0, 6.2832);
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.fill();
+
+      const g = ctx.createLinearGradient(bx, by, tx, ty);
+      const down = d.down;
+      const hue = down ? 26 : 38;
+      g.addColorStop(0, 'hsl(' + hue + ',90%,' + (down ? 42 : 60) + '%)');
+      g.addColorStop(0.5, 'hsl(' + (hue + 12) + ',95%,' + (down ? 50 : 68) + '%)');
+      g.addColorStop(1, 'hsl(' + (hue + 22) + ',100%,' + (down ? 58 : 78) + '%)');
+
+      ctx.beginPath();
+      ctx.moveTo(bx + px * hw, by + py * hw);
+      ctx.lineTo(tx + px * hw, ty + py * hw);
+      ctx.lineTo(tx - px * hw, ty - py * hw);
+      ctx.lineTo(bx - px * hw, by - py * hw);
+      ctx.closePath();
+      ctx.fillStyle = g;
+      ctx.fill();
+
+      // glowing top edge
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.beginPath();
+      ctx.moveTo(tx + px * hw, ty + py * hw);
+      ctx.lineTo(tx - px * hw, ty - py * hw);
+      ctx.strokeStyle = 'hsla(' + (hue + 30) + ',100%,85%,' + (down ? 0.25 : 0.6) + ')';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      // pip
+      ctx.fillStyle = 'hsla(45,100%,80%,' + (down ? 0.15 : 0.5) + ')';
+      ctx.beginPath();
+      ctx.arc(bx + ux * h * 0.55, by + uy * h * 0.55, w * 0.16, 0, 6.2832);
+      ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+    }
+  }
+
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width = Math.floor(W * DPR);
+    canvas.height = Math.floor(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.fillStyle = 'rgba(10,10,16,1)'; ctx.fillRect(0, 0, W, H);
+    build();
+  }
+
+  const FIXED = 1 / 240;
+  let acc = 0, last = performance.now();
+  function frame(now) {
+    let dt = (now - last) / 1000; last = now;
+    if (dt > 0.05) dt = 0.05;
+    acc += dt;
+    let guard = 0;
+    while (acc >= FIXED && guard < 16) { step(FIXED); acc -= FIXED; guard++; }
+    if (guard >= 16) acc = 0;
+    render();
+    requestAnimationFrame(frame);
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

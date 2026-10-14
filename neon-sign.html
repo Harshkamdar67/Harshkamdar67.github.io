@@ -1,0 +1,159 @@
+<!-- Concept: Buzzing Neon Sign -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Neon Sign</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Monoton&family=Niconne&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  html,body{ width:100%; height:100%; overflow:hidden; background:#07060a; }
+
+  .wall{
+    position:fixed; inset:0;
+    background:
+      radial-gradient(ellipse at 50% 34%, #1b1424 0%, #0b0910 58%, #050407 100%);
+  }
+  /* faint brick / wet-wall texture */
+  .wall::after{
+    content:''; position:absolute; inset:0; opacity:.16;
+    background-image:
+      linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
+    background-size:64px 32px, 64px 32px;
+  }
+
+  .scene{ position:absolute; left:50%; top:44%; transform:translate(-50%,-50%); text-align:center; }
+
+  .sign{ position:relative; display:inline-block; }
+
+  .neon{
+    position:relative;
+    font-family:'Monoton', cursive;
+    font-size:clamp(46px, 12.5vw, 190px);
+    line-height:1; letter-spacing:.03em; white-space:nowrap;
+    color:#fff0fb;
+    text-shadow:
+      0 0 4px #fff,
+      0 0 10px #ff3df0,
+      0 0 22px #ff3df0,
+      0 0 42px #ff3df0,
+      0 0 78px #c400e0,
+      0 0 120px #c400e0;
+    animation:buzz 4.2s infinite;
+  }
+  .neon.b{
+    display:block; margin-top:-.06em;
+    font-size:clamp(34px, 9vw, 140px);
+    color:#eaffff;
+    text-shadow:
+      0 0 4px #fff,
+      0 0 10px #26e6ff,
+      0 0 22px #26e6ff,
+      0 0 44px #00b3ff,
+      0 0 84px #0072ff,
+      0 0 130px #0050ff;
+    animation:buzz2 5.1s infinite;
+  }
+
+  @keyframes buzz{
+    0%,100%{ opacity:1; }
+    41%{ opacity:1; } 42%{ opacity:.35; } 43%{ opacity:1; }
+    70%{ opacity:1; } 71%{ opacity:.2; } 72%{ opacity:1; } 73%{ opacity:.6; } 74%{ opacity:1; }
+    88%{ opacity:1; } 88.5%{ opacity:.5; } 89%{ opacity:1; }
+  }
+  @keyframes buzz2{
+    0%,100%{ opacity:1; }
+    30%{ opacity:1; } 30.6%{ opacity:.25; } 31.2%{ opacity:1; }
+    55%{ opacity:1; } 55.5%{ opacity:.55; } 56%{ opacity:1; }
+    79%{ opacity:1; } 79.4%{ opacity:.15; } 79.8%{ opacity:.8; } 80.2%{ opacity:1; }
+  }
+
+  /* reflections on the wet floor */
+  .refl{
+    position:absolute; left:50%; top:100%; transform:translateX(-50%) scaleY(-1);
+    transform-origin:top center;
+    filter:blur(3px) saturate(1.2);
+    -webkit-mask-image:linear-gradient(180deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,0) 62%);
+            mask-image:linear-gradient(180deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,0) 62%);
+    pointer-events:none; white-space:nowrap;
+  }
+  .refl .neon{ animation:none; }
+
+  /* the glow pool on the floor */
+  .pool{
+    position:absolute; left:50%; top:96%; transform:translate(-50%,0);
+    width:min(70vw,900px); height:22vh;
+    background:radial-gradient(ellipse at 50% 0%, rgba(255,60,240,.28), rgba(38,230,255,.14) 45%, rgba(0,0,0,0) 72%);
+    filter:blur(8px);
+  }
+
+  .lines{ position:fixed; inset:0; z-index:8; pointer-events:none; opacity:.28;
+    background:repeating-linear-gradient(180deg, rgba(0,0,0,0) 0 3px, rgba(0,0,0,.4) 3px 4px); mix-blend-mode:multiply; }
+  .vig{ position:fixed; inset:0; z-index:7; pointer-events:none;
+    background:radial-gradient(ellipse at 50% 44%, rgba(0,0,0,0) 40%, rgba(0,0,0,.7) 100%); }
+
+  .badge{ position:fixed; left:14px; bottom:12px; z-index:20;
+    font-family:'Share Tech Mono', monospace; font-size:11px; letter-spacing:.12em;
+    color:rgba(255,150,240,.62); text-transform:uppercase;
+    background:rgba(24,6,20,.45); border:1px solid rgba(255,120,235,.26);
+    padding:6px 10px; border-radius:4px; backdrop-filter:blur(3px); user-select:none; }
+  .badge a{ color:rgba(255,190,250,.95); text-decoration:none; }
+  .badge a:hover{ text-shadow:0 0 8px rgba(255,120,235,.9); }
+</style>
+</head>
+<body>
+<div class="wall"></div>
+<div class="scene">
+  <div class="sign">
+    <div class="neon" id="n1">LUCKY</div>
+    <div class="neon b" id="n2">MOTEL</div>
+    <div class="refl">
+      <div class="neon">LUCKY</div>
+      <div class="neon b">MOTEL</div>
+    </div>
+  </div>
+  <div class="pool"></div>
+</div>
+<div class="vig"></div>
+<div class="lines"></div>
+<div class="badge">Neon Sign &nbsp;<a href="index.html">&larr; Gallery</a></div>
+<script>
+(function(){
+  // Occasional hard "brownout" — both tubes cut for a beat, like a real sign.
+  const n1 = document.getElementById('n1');
+  const n2 = document.getElementById('n2');
+  function brownout(){
+    const off = () => { n1.style.opacity = '0'; n2.style.opacity = '0'; };
+    const on  = () => { n1.style.opacity = '1'; n2.style.opacity = '1'; };
+    off();
+    setTimeout(on, 40 + Math.random()*90);
+    setTimeout(()=>{ off(); setTimeout(on, 25+Math.random()*40); }, 130+Math.random()*120);
+  }
+  (function sched(){
+    setTimeout(()=>{ brownout(); sched(); }, 3500 + Math.random()*6000);
+  })();
+
+  // pointer brightens the sign slightly (light spill feel)
+  let tgt = 0, cur = 0;
+  window.addEventListener('mousemove', e=>{ tgt = 1 - (e.clientY/window.innerHeight); });
+  (function loop(){
+    cur += (tgt-cur)*0.05;
+    document.documentElement.style.setProperty('--spill', (0.7+cur*0.6).toFixed(3));
+    requestAnimationFrame(loop);
+  })();
+
+  // slow ambient flicker of the wall glow
+  const wall = document.querySelector('.wall');
+  (function amb(t){
+    const k = 0.5 + 0.5*Math.sin(t*0.0012);
+    wall.style.filter = 'brightness('+(0.92 + k*0.12).toFixed(3)+')';
+    requestAnimationFrame(amb);
+  })(0);
+})();
+</script>
+</body>
+</html>

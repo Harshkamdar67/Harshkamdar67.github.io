@@ -1,0 +1,278 @@
+<!-- Concept 32: Pressure Soft-Body — jelly blobs that squash, jiggle and bounce under gravity -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jelly Soft-Body</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;background:#07070c}
+  canvas{display:block;width:100vw;height:100vh}
+  .badge{
+    position:fixed;left:14px;bottom:14px;z-index:10;
+    font:600 10px/1.3 'Inter',system-ui,sans-serif;
+    letter-spacing:.14em;text-transform:uppercase;
+    color:rgba(255,225,235,.66);
+    background:rgba(20,10,18,.42);
+    border:1px solid rgba(255,150,190,.18);
+    padding:7px 12px;border-radius:999px;
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    display:flex;gap:10px;align-items:center;pointer-events:none;white-space:nowrap;
+  }
+  .badge a{pointer-events:auto;color:rgba(255,150,190,.9);text-decoration:none;transition:color .2s}
+  .badge a:hover{color:#fff}
+  .badge .sep{opacity:.35}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="badge"><span>Jelly Soft-Body</span><span class="sep">/</span><a href="index.html">&larr; Gallery</a></div>
+<script>
+(() => {
+  'use strict';
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W = 0, H = 0, DPR = 1;
+
+  const N = 52;              // perimeter particles per blob
+  const GRAV = 1300;
+  const DAMP = 0.9955;
+  const ITER = 6;            // shape-constraint iterations
+  const FLOOR_R = 0.66;      // floor restitution (springy pad)
+  const WALL_R = 0.6;
+  const MAXV = 280;          // velocity clamp (px/s)
+
+  const palettes = [
+    { a: '#ff4d9d', b: '#ffd166', glow: 'rgba(255,80,160,' },
+    { a: '#39e0ff', b: '#6a7bff', glow: 'rgba(60,200,255,' },
+    { a: '#8affc1', b: '#2fd6a0', glow: 'rgba(120,255,190,' },
+    { a: '#c08bff', b: '#ff7bd5', glow: 'rgba(190,140,255,' },
+    { a: '#ffb347', b: '#ff5e5e', glow: 'rgba(255,150,90,' }
+  ];
+
+  class Blob {
+    constructor(cx, cy, r, pal) {
+      this.pal = pal;
+      this.pts = [];
+      for (let i = 0; i < N; i++) {
+        const ang = i / N * Math.PI * 2;
+        const rr = r * (0.97 + Math.random() * 0.06);
+        const x = cx + Math.cos(ang) * rr;
+        const y = cy + Math.sin(ang) * rr;
+        this.pts.push({ x, y, ox: x, oy: y - (0.4 + Math.random() * 0.4) });
+      }
+      this.rest = 2 * Math.PI * r / N;
+      this.area0 = Math.PI * r * r;
+      this.r0 = r;
+    }
+
+    step(dt) {
+      const dt2 = dt * dt;
+      const P = this.pts;
+      // Verlet integration
+      for (let i = 0; i < N; i++) {
+        const p = P[i];
+        let vx = (p.x - p.ox) * DAMP;
+        let vy = (p.y - p.oy) * DAMP;
+        p.ox = p.x; p.oy = p.y;
+        p.x += vx;
+        p.y += vy + GRAV * dt2;
+      }
+
+      for (let it = 0; it < ITER; it++) {
+        // distance constraints (shape)
+        for (let i = 0; i < N; i++) {
+          const a = P[i], b = P[(i + 1) % N];
+          let dx = b.x - a.x, dy = b.y - a.y;
+          let d = Math.hypot(dx, dy) || 1e-6;
+          const diff = (d - this.rest) / d * 0.5;
+          const ox = dx * diff, oy = dy * diff;
+          a.x += ox; a.y += oy;
+          b.x -= ox; b.y -= oy;
+        }
+        // area (volume) preservation
+        let cx = 0, cy = 0;
+        for (let i = 0; i < N; i++) { cx += P[i].x; cy += P[i].y; }
+        cx /= N; cy /= N;
+        let A = 0, per = 0;
+        for (let i = 0; i < N; i++) {
+          const a = P[i], b = P[(i + 1) % N];
+          A += a.x * b.y - b.x * a.y;
+          per += Math.hypot(b.x - a.x, b.y - a.y);
+        }
+        A = Math.abs(A) * 0.5;
+        const k = (this.area0 - A) / (per || 1) * 0.9;
+        for (let i = 0; i < N; i++) {
+          const p = P[i];
+          let dx = p.x - cx, dy = p.y - cy;
+          const d = Math.hypot(dx, dy) || 1;
+          p.x += dx / d * k;
+          p.y += dy / d * k;
+        }
+      }
+
+      // walls / floor with restitution
+      const floor = H - 4;
+      for (let i = 0; i < N; i++) {
+        const p = P[i];
+        let vx = p.x - p.ox, vy = p.y - p.oy;
+        if (vx > MAXV) vx = MAXV; else if (vx < -MAXV) vx = -MAXV;
+        if (vy > MAXV) vy = MAXV; else if (vy < -MAXV) vy = -MAXV;
+        if (p.y > floor) {
+          p.y = floor;
+          const nvy = -(vy * FLOOR_R + 30);
+          p.oy = p.y - nvy;
+          p.ox = p.x - vx * 0.9;
+        }
+        if (p.y < 4) { p.y = 4; p.oy = p.y - Math.abs(vy) * WALL_R; }
+        if (p.x < 4) { p.x = 4; p.ox = p.x - Math.abs(vx) * WALL_R; }
+        if (p.x > W - 4) { p.x = W - 4; p.ox = p.x + Math.abs(vx) * WALL_R; }
+      }
+    }
+
+    center() {
+      let cx = 0, cy = 0;
+      for (const p of this.pts) { cx += p.x; cy += p.y; }
+      return { x: cx / N, y: cy / N };
+    }
+
+    render(t) {
+      const P = this.pts;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.beginPath();
+      for (let i = 0; i <= N; i++) { const p = P[i % N]; if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); }
+      ctx.closePath();
+      ctx.shadowColor = this.pal.glow + '0.9)';
+      ctx.shadowBlur = 26;
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = this.pal.glow + '0.5)';
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      const c = this.center();
+      let maxr = 0;
+      for (const p of P) maxr = Math.max(maxr, Math.hypot(p.x - c.x, p.y - c.y));
+
+      const g = ctx.createRadialGradient(c.x - maxr * 0.3, c.y - maxr * 0.35, maxr * 0.08, c.x, c.y, maxr * 1.15);
+      g.addColorStop(0, this.pal.b);
+      g.addColorStop(0.55, this.pal.a);
+      g.addColorStop(1, 'rgba(18,8,20,0.9)');
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.beginPath();
+      for (let i = 0; i <= N; i++) { const p = P[i % N]; if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); }
+      ctx.closePath();
+      ctx.fillStyle = g;
+      ctx.fill();
+
+      ctx.globalCompositeOperation = 'lighter';
+      const hg = ctx.createRadialGradient(c.x - maxr * 0.4, c.y - maxr * 0.45, 0, c.x - maxr * 0.4, c.y - maxr * 0.45, maxr * 0.95);
+      hg.addColorStop(0, 'rgba(255,255,255,0.6)');
+      hg.addColorStop(0.4, 'rgba(255,255,255,0.07)');
+      hg.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = hg;
+      ctx.beginPath();
+      for (let i = 0; i <= N; i++) { const p = P[i % N]; if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); }
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  function collideBlobs() {
+    for (let i = 0; i < blobs.length; i++) {
+      for (let j = i + 1; j < blobs.length; j++) {
+        const A = blobs[i], B = blobs[j];
+        const ca = A.center(), cb = B.center();
+        let ra = 0, rb = 0;
+        for (const p of A.pts) ra += Math.hypot(p.x - ca.x, p.y - ca.y); ra /= N;
+        for (const p of B.pts) rb += Math.hypot(p.x - cb.x, p.y - cb.y); rb /= N;
+        const dx = cb.x - ca.x, dy = cb.y - ca.y;
+        const d = Math.hypot(dx, dy) || 1e-6;
+        const overlap = (ra + rb) - d;
+        if (overlap > 0) {
+          const nx = dx / d, ny = dy / d;
+          const push = overlap * 0.5;
+          for (const p of A.pts) { p.x -= nx * push; p.y -= ny * push; }
+          for (const p of B.pts) { p.x += nx * push; p.y += ny * push; }
+        }
+      }
+    }
+  }
+
+  let blobs = [];
+  function build() {
+    blobs = [];
+    const count = W < 700 ? 4 : 5;
+    const baseR = Math.min(W, H) * 0.10;
+    for (let i = 0; i < count; i++) {
+      const r = baseR * (0.8 + Math.random() * 0.7);
+      const cx = (W / (count + 1)) * (i + 1) + (Math.random() - 0.5) * 30;
+      const cy = H * (0.15 + Math.random() * 0.3);
+      blobs.push(new Blob(cx, cy, r, palettes[i % palettes.length]));
+    }
+  }
+
+  const mouse = { x: 0, y: 0, down: false };
+  function push(force) {
+    for (const b of blobs) {
+      for (const p of b.pts) {
+        const dx = p.x - mouse.x, dy = p.y - mouse.y;
+        const d2 = dx * dx + dy * dy;
+        if (d2 < 320 * 320) {
+          const d = Math.sqrt(d2) || 1;
+          const f = (1 - d / 320) * force;
+          p.ox -= (dx / d) * f;
+          p.oy -= (dy / d) * f;
+        }
+      }
+    }
+  }
+  function evt(e) { const t = e.touches ? e.touches[0] : e; return { x: t.clientX, y: t.clientY }; }
+  canvas.addEventListener('mousedown', e => { const p = evt(e); mouse.x = p.x; mouse.y = p.y; mouse.down = true; push(14); e.preventDefault(); });
+  canvas.addEventListener('mousemove', e => { const p = evt(e); mouse.x = p.x; mouse.y = p.y; if (mouse.down) push(7); });
+  window.addEventListener('mouseup', () => mouse.down = false);
+  canvas.addEventListener('touchstart', e => { const p = evt(e); mouse.x = p.x; mouse.y = p.y; mouse.down = true; push(14); e.preventDefault(); }, { passive: false });
+  canvas.addEventListener('touchmove', e => { const p = evt(e); mouse.x = p.x; mouse.y = p.y; push(7); e.preventDefault(); }, { passive: false });
+  window.addEventListener('touchend', () => mouse.down = false);
+
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width = Math.floor(W * DPR);
+    canvas.height = Math.floor(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    build();
+  }
+
+  const FIXED = 1 / 240;
+  let acc = 0, last = performance.now(), t = 0;
+  function frame(now) {
+    let dt = (now - last) / 1000; last = now;
+    if (dt > 0.05) dt = 0.05;
+    acc += dt;
+    let guard = 0;
+    while (acc >= FIXED && guard < 12) { t += FIXED; for (const b of blobs) b.step(FIXED); collideBlobs(); acc -= FIXED; guard++; }
+    if (guard >= 12) acc = 0;
+
+    ctx.fillStyle = 'rgba(7,7,12,0.55)';
+    ctx.fillRect(0, 0, W, H);
+    const fg = ctx.createLinearGradient(0, H - 130, 0, H);
+    fg.addColorStop(0, 'rgba(255,80,160,0)');
+    fg.addColorStop(1, 'rgba(255,80,160,0.07)');
+    ctx.fillStyle = fg; ctx.fillRect(0, H - 130, W, 130);
+    for (const b of blobs) b.render(t);
+    requestAnimationFrame(frame);
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

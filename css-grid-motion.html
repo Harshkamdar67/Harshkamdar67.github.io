@@ -1,0 +1,90 @@
+<!-- Concept 60 · CSS Grid Motion — an animated mosaic grid with staggered wave motion and hover ripple -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CSS Grid Motion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%}
+  body{background:#07070a;color:#f2f2f6;font-family:"Space Grotesk",system-ui,sans-serif;overflow:hidden;
+    display:grid;place-items:center}
+  .grid{display:grid;gap:min(1vmin,10px);width:100vw;height:100vh;padding:min(1vmin,10px);
+    grid-template-columns:repeat(16,1fr);grid-template-rows:repeat(10,1fr)}
+  .cell{position:relative;border-radius:8px;background:#0d0d13;overflow:hidden;cursor:crosshair;
+    transition:transform .18s ease,box-shadow .3s ease,background .3s ease;
+    animation:wave 6s ease-in-out infinite}
+  .cell::after{content:"";position:absolute;inset:0;border-radius:8px;opacity:0;
+    background:radial-gradient(circle at 50% 50%,#fff,transparent 70%);transition:opacity .3s ease}
+  .cell.on{background:linear-gradient(135deg,#ff2d55,#ff9f0a)}
+  .cell.on::after{opacity:.55}
+  .cell.cool{background:linear-gradient(135deg,#0a84ff,#bf5af2)}
+  @keyframes wave{
+    0%,100%{transform:scale(.82);background:#0d0d13;box-shadow:none}
+    50%{transform:scale(1);background:var(--hue,#12121c);
+      box-shadow:0 0 18px 2px var(--glow,rgba(10,132,255,.5))}
+  }
+  .grid.hot .cell{--hue:#2a0f1a;--glow:rgba(255,45,85,.6)}
+  .grid.coolmode .cell{--hue:#0f1a2a;--glow:rgba(10,132,255,.6)}
+  .vignette{position:fixed;inset:0;pointer-events:none;
+    background:radial-gradient(80% 70% at 50% 50%,transparent 40%,rgba(4,4,7,.85) 100%)}
+  .hud{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:flex-start;
+    padding:1.4rem 1.6rem;z-index:6;pointer-events:none}
+  .hud h1{font-weight:700;font-size:clamp(1rem,2.6vw,1.6rem);letter-spacing:.2em;text-transform:uppercase}
+  .hud .meta{font-family:"Space Mono",monospace;font-size:.6rem;letter-spacing:.36em;text-transform:uppercase;
+    color:rgba(242,242,246,.6);text-align:right}
+  .badge{position:fixed;bottom:1.1rem;left:1.1rem;z-index:20;font-family:"Space Mono",monospace;
+    font-size:.62rem;letter-spacing:.16em;text-transform:uppercase;
+    background:rgba(10,10,14,.55);border:1px solid rgba(255,255,255,.16);border-radius:999px;
+    padding:.5rem .85rem;backdrop-filter:blur(8px);color:rgba(255,255,255,.72)}
+  .badge a{color:#fff;text-decoration:none}
+  .badge a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+  <div class="grid" id="grid"></div>
+  <div class="vignette"></div>
+  <div class="hud"><h1>Ripple</h1><div class="meta">16 × 10 mosaic<br>hover to excite</div></div>
+  <div class="badge">CSS Grid Motion &nbsp;·&nbsp; <a href="index.html">&larr; Gallery</a></div>
+  <script>
+    const grid=document.getElementById('grid');
+    const COLS=16,ROWS=10,N=COLS*ROWS;
+    const cells=[];
+    for(let i=0;i<N;i++){
+      const c=document.createElement('div');
+      c.className='cell';
+      c.dataset.i=i;
+      grid.appendChild(c); cells.push(c);
+    }
+    // staggered wave phase by distance from centre
+    const cx=(COLS-1)/2, cy=(ROWS-1)/2;
+    cells.forEach((c,i)=>{
+      const x=i%COLS,y=Math.floor(i/COLS);
+      const d=Math.hypot(x-cx,y-cy);
+      c.style.animationDelay=(-d*0.18)+'s';
+      c.style.animationDuration=(4.5+Math.random()*2.5)+'s';
+    });
+    // hover ripple
+    grid.addEventListener('pointermove',e=>{
+      const t=e.target.closest('.cell'); if(!t)return;
+      const i=+t.dataset.i, x=i%COLS, y=Math.floor(i/COLS);
+      cells.forEach((c,j)=>{
+        const jx=j%COLS, jy=Math.floor(j/COLS);
+        const d=Math.hypot(jx-x,jy-y);
+        if(d<3.2){
+          c.classList.add(d<1.4?'on':'cool');
+          clearTimeout(c._t);
+          c._t=setTimeout(()=>c.classList.remove('on','cool'),260+d*130);
+        }
+      });
+    },{passive:true});
+    grid.addEventListener('click',()=>{
+      grid.classList.toggle('hot'); grid.classList.toggle('coolmode');
+    });
+  </script>
+</body>
+</html>

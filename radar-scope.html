@@ -1,0 +1,199 @@
+<!-- CONCEPT: Radar Scope — a phosphor sonar display with a rotating sweep, fading contact blips, range rings and contact readouts -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Radar Scope</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@600&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;background:#02120a}
+  canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh}
+  #scan{position:fixed;inset:0;pointer-events:none;z-index:5;mix-blend-mode:overlay;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,0) 0px,rgba(0,0,0,0) 2px,rgba(0,0,0,0.16) 3px,rgba(0,0,0,0) 4px)}
+  #badge{position:fixed;left:16px;bottom:14px;z-index:10;font-family:'Share Tech Mono',monospace;
+    font-size:10px;letter-spacing:.14em;color:rgba(110,255,170,.6);text-transform:uppercase;
+    display:flex;gap:10px;align-items:center}
+  #badge a{color:rgba(110,255,170,.6);text-decoration:none;border-bottom:1px solid rgba(110,255,170,.22)}
+  #badge a:hover{color:#7dffb6}
+  #badge .dot{width:4px;height:4px;border-radius:50%;background:#2effa0;box-shadow:0 0 8px #2effa0}
+  #contacts{position:fixed;left:22px;top:18px;font-family:'Share Tech Mono',monospace;font-size:11px;
+    color:rgba(120,255,180,.8);line-height:1.55;text-shadow:0 0 8px rgba(40,255,150,.4)}
+  #contacts .h{color:rgba(160,255,200,.95);letter-spacing:.2em;font-size:10px}
+  #contacts .row{display:grid;grid-template-columns:58px 74px 58px;gap:10px}
+  #contacts .row i{color:rgba(90,230,150,.55);font-style:normal}
+  #clock{position:fixed;right:22px;bottom:18px;font-family:'Share Tech Mono',monospace;font-size:11px;
+    color:rgba(120,255,180,.7);text-align:right;line-height:1.6}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="scan"></div>
+<div id="contacts"></div>
+<div id="clock"></div>
+<div id="badge"><span class="dot"></span><span>Radar Scope</span><span>&middot;</span><a href="index.html">&larr; Gallery</a></div>
+<script>
+(()=>{
+  const cvs=document.getElementById('c'),ctx=cvs.getContext('2d');
+  let W,H,DPR,cx,cy,R;
+  const TAU=Math.PI*2;
+  const blips=[];
+  let sweep=0;
+  const RINGS=4;
+
+  function resize(){
+    DPR=Math.min(devicePixelRatio||1,2);
+    W=innerWidth;H=innerHeight;
+    cvs.width=Math.floor(W*DPR);cvs.height=Math.floor(H*DPR);
+    cvs.style.width=W+'px';cvs.style.height=H+'px';
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    cx=W*0.5;cy=H*0.54;R=Math.min(W,H)*0.40;
+  }
+
+  function spawn(){
+    const a=Math.random()*TAU;
+    const r=(0.15+Math.random()*0.85)*R;
+    blips.push({
+      a, r,
+      id:'T'+String(Math.floor(Math.random()*900)+100),
+      glow:0, seen:false,
+      drift:(Math.random()-0.5)*0.0016,
+      rd:(Math.random()-0.5)*0.05
+    });
+  }
+
+  function loop(){
+    sweep=(sweep+0.018)%TAU;
+
+    ctx.fillStyle='rgba(2,18,10,0.22)';ctx.fillRect(0,0,W,H);
+    ctx.globalCompositeOperation='lighter';
+
+    // background grid disc
+    ctx.fillStyle='rgba(6,40,24,0.35)';
+    ctx.beginPath();ctx.arc(cx,cy,R,0,TAU);ctx.fill();
+
+    // range rings
+    for(let i=1;i<=RINGS;i++){
+      const rr=R*(i/RINGS);
+      ctx.strokeStyle=`rgba(60,230,140,${i===RINGS?0.4:0.18})`;
+      ctx.lineWidth=i===RINGS?1.6:1;
+      ctx.beginPath();ctx.arc(cx,cy,rr,0,TAU);ctx.stroke();
+      ctx.fillStyle='rgba(90,255,160,0.35)';
+      ctx.font='9px "Share Tech Mono", monospace';ctx.textAlign='left';ctx.textBaseline='middle';
+      ctx.fillText((i*25)+'km', cx+4, cy-rr);
+    }
+    // cross-hairs
+    ctx.strokeStyle='rgba(60,230,140,0.16)';ctx.lineWidth=1;
+    for(let i=0;i<4;i++){
+      const a=i/4*TAU;
+      ctx.beginPath();ctx.moveTo(cx+Math.cos(a)*R,cy+Math.sin(a)*R);
+      ctx.lineTo(cx-Math.cos(a)*R,cy-Math.sin(a)*R);ctx.stroke();
+    }
+    // bearing ticks
+    for(let d=0;d<360;d+=10){
+      const a=d/360*TAU - Math.PI/2;
+      const len=(d%30===0)?10:5;
+      ctx.strokeStyle='rgba(70,240,150,0.35)';
+      ctx.beginPath();
+      ctx.moveTo(cx+Math.cos(a)*R,cy+Math.sin(a)*R);
+      ctx.lineTo(cx+Math.cos(a)*(R+len),cy+Math.sin(a)*(R+len));ctx.stroke();
+    }
+    // cardinal labels
+    const cards=[['N',-Math.PI/2],['E',0],['S',Math.PI/2],['W',Math.PI]];
+    ctx.fillStyle='rgba(140,255,190,0.7)';ctx.font='12px "Share Tech Mono", monospace';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    for(const [c,a] of cards){ctx.fillText(c,cx+Math.cos(a)*(R+24),cy+Math.sin(a)*(R+24));}
+
+    // sweep wedge
+    const grad=ctx.createConicGradient? null:null;
+    // draw fading wedge by segments
+    const seg=44;
+    for(let s=0;s<seg;s++){
+      const a0=sweep - s/seg*0.9;
+      const al=(1-s/seg)*0.30;
+      ctx.strokeStyle=`rgba(60,255,150,${al})`;
+      ctx.lineWidth=2;
+      ctx.beginPath();
+      ctx.moveTo(cx,cy);
+      ctx.lineTo(cx+Math.cos(a0)*R,cy+Math.sin(a0)*R);
+      ctx.stroke();
+    }
+    // bright sweep line
+    ctx.strokeStyle='rgba(160,255,200,0.95)';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(cx,cy);
+    ctx.lineTo(cx+Math.cos(sweep)*R,cy+Math.sin(sweep)*R);ctx.stroke();
+
+    // spawn
+    if(Math.random()<0.05 && blips.length<16) spawn();
+
+    // blips
+    for(let i=blips.length-1;i>=0;i--){
+      const b=blips[i];
+      b.a+=b.drift; b.r+=b.rd;
+      if(b.r>R*0.98||b.r<R*0.08){b.rd*=-1;}
+      // sweep detection: blips persist (unconfirmed) until the beam crosses them
+      let da=((sweep-b.a)%TAU+TAU)%TAU;
+      if(da<0.09){ b.seen=true; b.glow=1; }
+      if(b.seen){
+        b.glow*=0.972;
+        if(b.glow<0.03){blips.splice(i,1);continue;}
+      }
+      const x=cx+Math.cos(b.a)*b.r, y=cy+Math.sin(b.a)*b.r;
+      if(!b.seen){
+        // faint pending contact marker
+        ctx.strokeStyle='rgba(70,200,130,0.35)';
+        ctx.lineWidth=1;
+        ctx.beginPath();ctx.arc(x,y,4,0,TAU);ctx.stroke();
+      } else {
+        const g=ctx.createRadialGradient(x,y,0,x,y,18);
+        g.addColorStop(0,`rgba(170,255,205,${0.95*b.glow})`);
+        g.addColorStop(0.4,`rgba(60,255,150,${0.55*b.glow})`);
+        g.addColorStop(1,'rgba(60,255,150,0)');
+        ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,18,0,7);ctx.fill();
+        ctx.fillStyle=`rgba(220,255,235,${0.95*b.glow})`;
+        ctx.beginPath();ctx.arc(x,y,2.6,0,7);ctx.fill();
+        if(b.glow>0.45){
+          ctx.fillStyle=`rgba(160,255,200,${b.glow})`;
+          ctx.font='9px "Share Tech Mono", monospace';ctx.textAlign='left';ctx.textBaseline='bottom';
+          ctx.fillText(b.id, x+8, y-4);
+        }
+      }
+    }
+
+    // center
+    ctx.fillStyle='rgba(180,255,210,0.9)';
+    ctx.beginPath();ctx.arc(cx,cy,3,0,TAU);ctx.fill();
+
+    ctx.globalCompositeOperation='source-over';
+
+    // readouts
+    const deg=(sweep/TAU*360);
+    document.getElementById('clock').innerHTML=
+      'SWEEP '+deg.toFixed(0).padStart(3,'0')+'&deg;<br>CONTACTS '+blips.length+'<br>RANGE 100km';
+    updateContacts();
+
+    requestAnimationFrame(loop);
+  }
+
+  const cEl=document.getElementById('contacts');
+  function updateContacts(){
+    let html='<div class="h">CONTACT LIST</div>';
+    const sorted=[...blips].sort((a,b)=>b.glow-a.glow).slice(0,6);
+    for(const b of sorted){
+      const brg=((b.a/TAU*360+360)%360).toFixed(0).padStart(3,'0');
+      const rng=(b.r/R*100).toFixed(0).padStart(3,'0');
+      html+=`<div class="row"><i>${b.id}</i><span>${brg}&deg;</span><span>${rng}km</span></div>`;
+    }
+    cEl.innerHTML=html;
+  }
+
+  addEventListener('resize',resize);
+  resize();
+  for(let i=0;i<6;i++){spawn();}
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

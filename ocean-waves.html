@@ -1,0 +1,112 @@
+<!-- Ocean Waves — a shader sea rolling to a horizon under a low sun, with glinting crests -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ocean Waves</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500&display=swap" rel="stylesheet">
+<style>
+  html,body{margin:0;height:100%;background:#000;overflow:hidden;}
+  #c{display:block;width:100vw;height:100vh;}
+  .badge{position:fixed;left:16px;bottom:14px;z-index:9;font-family:'Inter',system-ui,sans-serif;
+    font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:rgba(215,235,255,.5);
+    background:rgba(6,14,26,.32);border:1px solid rgba(140,200,255,.12);border-radius:999px;
+    padding:6px 12px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:color .4s,border-color .4s;}
+  .badge:hover{color:rgba(235,245,255,.92);border-color:rgba(140,200,255,.32);}
+  .badge a{color:inherit;text-decoration:none;}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="badge">Ocean Waves&nbsp; ·&nbsp; <a href="index.html">&larr; Gallery</a></div>
+<script>
+(function(){
+  var canvas=document.getElementById('c');
+  var gl=canvas.getContext('webgl',{antialias:true,alpha:false,powerPreference:'high-performance'});
+  if(!gl){document.body.innerHTML='<p style="color:#def;font-family:sans-serif;padding:2rem">WebGL not available.</p>';return;}
+  var vs='attribute vec2 a;void main(){gl_Position=vec4(a,0.0,1.0);}';
+  var fs=[
+  'precision highp float;',
+  'uniform vec2 u_resolution; uniform float u_time; uniform vec2 u_mouse;',
+  'float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453123);}',
+  'float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);',
+  ' float a=hash(i),b=hash(i+vec2(1.,0.)),c=hash(i+vec2(0.,1.)),d=hash(i+vec2(1.,1.));',
+  ' return mix(mix(a,b,f.x),mix(c,d,f.x),f.y);}',
+  'float fbm(vec2 p){float s=0.0,a=0.5;mat2 m=mat2(1.6,1.2,-1.2,1.6);',
+  ' for(int i=0;i<5;i++){s+=a*noise(p);p=m*p;a*=0.5;}return s;}',
+  'void main(){',
+  ' vec2 uv=(gl_FragCoord.xy-0.5*u_resolution)/u_resolution.y;',
+  ' vec2 m=(u_mouse-0.5*u_resolution)/u_resolution.y;',
+  ' float t=u_time;',
+  ' float horizon=0.02-m.y*0.10;',
+  ' float h=uv.y-horizon;',
+  ' float sunx=0.15+m.x*0.5;',
+  ' vec3 col;',
+  ' if(h>0.0){',
+  '  float k=h;',
+  '  vec3 sky=mix(vec3(0.90,0.55,0.35),vec3(0.08,0.16,0.35),smoothstep(0.0,0.55,k));',
+  '  sky=mix(sky,vec3(0.02,0.05,0.14),smoothstep(0.30,0.90,k));',
+  '  float g=exp(-abs(uv.x-sunx)*2.5)*exp(-k*7.0);',
+  '  sky+=vec3(1.0,0.72,0.42)*g*1.3;',
+  '  col=sky;',
+  ' } else {',
+  '  float d=-h;',
+  '  float v=0.05/(d+0.03);',
+  '  float x=uv.x*v*2.0;',
+  '  float z=v*3.0;',
+  '  float w=sin(x*2.0+t*1.2+z*3.0)*0.5;',
+  '  w+=sin(x*4.3-t*1.7+z*6.5)*0.25;',
+  '  w+=sin(x*1.1+t*0.6-z*2.0)*0.35;',
+  '  float n=fbm(vec2(x*1.4,z*1.8+t*0.4));',
+  '  w+=(n-0.5)*0.9;',
+  '  float sh=clamp(w*0.5+0.5,0.0,1.0);',
+  '  vec3 deep=vec3(0.0,0.05,0.12);',
+  '  vec3 crest=vec3(0.08,0.35,0.50);',
+  '  col=mix(deep,crest,sh);',
+  '  float spec=pow(max(0.0,w),10.0);',
+  '  col+=vec3(1.0,0.80,0.50)*spec*1.6*exp(-d*4.0);',
+  '  float streak=exp(-abs(uv.x-sunx)*3.0)*exp(-d*6.0);',
+  '  col+=vec3(1.0,0.70,0.40)*streak*0.6;',
+  '  vec3 haze=vec3(0.50,0.40,0.35);',
+  '  col=mix(haze,col,smoothstep(0.0,0.14,d));',
+  ' }',
+  ' col*=1.0-0.3*length(uv*vec2(0.5,0.8));',
+  ' gl_FragColor=vec4(max(col,0.0),1.0);',
+  '}'].join('\n');
+  function sh(type,src){var s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);
+    if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){console.error(gl.getShaderInfoLog(s));}return s;}
+  var prog=gl.createProgram();
+  gl.attachShader(prog,sh(gl.VERTEX_SHADER,vs));
+  gl.attachShader(prog,sh(gl.FRAGMENT_SHADER,fs));
+  gl.linkProgram(prog);gl.useProgram(prog);
+  var buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
+  var loc=gl.getAttribLocation(prog,'a');gl.enableVertexAttribArray(loc);
+  gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+  var uRes=gl.getUniformLocation(prog,'u_resolution'),
+      uTime=gl.getUniformLocation(prog,'u_time'),
+      uMouse=gl.getUniformLocation(prog,'u_mouse');
+  var mx=0.5,my=0.5,tmx=0.5,tmy=0.5;
+  function move(x,y){tmx=x/window.innerWidth;tmy=1.0-y/window.innerHeight;}
+  window.addEventListener('mousemove',function(e){move(e.clientX,e.clientY);});
+  window.addEventListener('touchmove',function(e){if(e.touches[0])move(e.touches[0].clientX,e.touches[0].clientY);},{passive:true});
+  var dpr=Math.min(window.devicePixelRatio||1,2);
+  function resize(){var w=Math.floor(window.innerWidth*dpr),h=Math.floor(window.innerHeight*dpr);
+    if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;gl.viewport(0,0,w,h);}}
+  resize();window.addEventListener('resize',resize);
+  var start=performance.now();
+  function frame(now){
+    mx+=(tmx-mx)*0.05;my+=(tmy-my)*0.05;
+    gl.uniform2f(uRes,canvas.width,canvas.height);
+    gl.uniform1f(uTime,(now-start)/1000);
+    gl.uniform2f(uMouse,mx*canvas.width,my*canvas.height);
+    gl.drawArrays(gl.TRIANGLES,0,3);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

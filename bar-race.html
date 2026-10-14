@@ -1,0 +1,184 @@
+<!-- CONCEPT: Bar Chart Race — synthetic entities racing through time with smoothly interpolated ranks, widths and values -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bar Chart Race</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;background:#080b12}
+  canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh}
+  #badge{position:fixed;left:16px;bottom:14px;z-index:10;font-family:'IBM Plex Mono',monospace;
+    font-size:10px;letter-spacing:.14em;color:rgba(180,200,235,.55);text-transform:uppercase;
+    display:flex;gap:10px;align-items:center}
+  #badge a{color:rgba(180,200,235,.55);text-decoration:none;border-bottom:1px solid rgba(180,200,235,.22)}
+  #badge a:hover{color:#7fb2ff}
+  #badge .dot{width:4px;height:4px;border-radius:50%;background:#5b8cff;box-shadow:0 0 8px #5b8cff}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="badge"><span class="dot"></span><span>Bar Chart Race</span><span>&middot;</span><a href="index.html">&larr; Gallery</a></div>
+<script>
+(()=>{
+  const cvs=document.getElementById('c'),ctx=cvs.getContext('2d');
+  let W,H,DPR;
+
+  const NAMES=['AURORA','BOREAL','CIRRUS','DELTA','EMBER','FLUX','GLYPH','HELIX','ION','JUNO','KITE','LUMA'];
+  const COLORS=['#5b8cff','#00d6a4','#ff8f4d','#ff5d8f','#c084fc','#38d9ff',
+                '#ffd23f','#7bffb0','#ff6b6b','#9d7bff','#4dd2ff','#ffa41b'];
+  const STEPS=14;          // time frames
+  const YEARS=[]; for(let i=0;i<STEPS;i++)YEARS.push(2005+i*1.5);
+
+  // generate synthetic time series per entity
+  const series=[];
+  const rnd=mulberry32(2026);
+  NAMES.forEach((nm,i)=>{
+    let v=200+rnd()*600;
+    const arr=[];
+    for(let s=0;s<STEPS;s++){
+      v*= (0.86+rnd()*0.42);
+      arr.push(v);
+    }
+    series.push({name:nm,color:COLORS[i],vals:arr});
+  });
+  // normalise so values look like a ranking metric
+  const maxAll=Math.max(...series.flatMap(s=>s.vals));
+
+  function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+
+  // animation state
+  let frame=0;             // continuous step position
+  const SPEED=0.010;       // steps per frame
+  const view={w:0,h:0};
+
+  function resize(){
+    DPR=Math.min(devicePixelRatio||1,2);
+    W=innerWidth;H=innerHeight;
+    cvs.width=Math.floor(W*DPR);cvs.height=Math.floor(H*DPR);
+    cvs.style.width=W+'px';cvs.style.height=H+'px';
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    view.w=W;view.h=H;
+  }
+
+  // per-entity animated rank + value, persist across frames
+  const state=series.map((s,i)=>({rank:i, value:s.vals[0], first:true}));
+
+  function lerp(a,b,t){return a+(b-a)*t;}
+
+  function frameAt(f){
+    const i0=Math.floor(f)%STEPS, i1=(Math.floor(f)+1)%STEPS;
+    const t=f-Math.floor(f);
+    const vals=series.map(s=>lerp(s.vals[i0], s.vals[i1], t));
+    const order=series.map((s,i)=>i).sort((a,b)=>vals[b]-vals[a]);
+    const rankOf=new Array(series.length);
+    order.forEach((idx,r)=>rankOf[idx]=r);
+    return {vals, rankOf};
+  }
+
+  function loop(){
+    frame+=SPEED;
+    if(frame>=STEPS) frame-=STEPS;
+    const {vals,rankOf}=frameAt(frame);
+
+    ctx.fillStyle='#080b12';ctx.fillRect(0,0,W,H);
+
+    const padTop=Math.max(80,H*0.14);
+    const padBottom=Math.max(50,H*0.09);
+    const labelW=Math.max(90,W*0.11);
+    const valueW=Math.max(80,W*0.10);
+    const barAreaW=W-labelW-valueW-Math.max(24,W*0.03);
+    const rowH=(H-padTop-padBottom)/Math.min(series.length,12);
+    const barH=rowH*0.66;
+
+    // title
+    const yNow=Math.floor(YEARS[Math.floor(frame)%STEPS]);
+    ctx.font=`800 ${Math.min(W*0.035,H*0.06)}px Inter, sans-serif`;
+    ctx.fillStyle='#eef2fb';ctx.textAlign='left';ctx.textBaseline='alphabetic';
+    ctx.fillText('Synthetic Index Race', Math.max(24,W*0.03), Math.max(38,H*0.06));
+    ctx.font=`500 ${Math.min(W*0.014,H*0.024)}px 'IBM Plex Mono', monospace`;
+    ctx.fillStyle='rgba(150,175,220,0.6)';
+    ctx.fillText('metric · units / period', Math.max(24,W*0.03), Math.max(60,H*0.09));
+
+    // big year
+    ctx.textAlign='right';
+    ctx.font=`800 ${Math.min(W*0.09,H*0.15)}px Inter, sans-serif`;
+    ctx.fillStyle='rgba(120,150,220,0.16)';
+    ctx.fillText(String(yNow), W-Math.max(24,W*0.03), Math.max(70,H*0.11));
+
+    const curMax=Math.max(...vals);
+    const scale=(barAreaW)/curMax;
+
+    // update animated state & draw
+    const items=series.map((s,i)=>{
+      const targetRank=rankOf[i], targetVal=vals[i];
+      if(state[i].first){state[i].rank=targetRank;state[i].value=targetVal;state[i].first=false;}
+      state[i].rank=lerp(state[i].rank,targetRank,0.10);
+      state[i].value=lerp(state[i].value,targetVal,0.12);
+      return {i,name:s.name,color:s.color,rank:state[i].rank,value:state[i].value};
+    }).sort((a,b)=>a.rank-b.rank);
+
+    for(const it of items){
+      const y=padTop+it.rank*rowH;
+      const bw=Math.max(2,it.value*scale);
+      const x=labelW;
+      // bar
+      const g=ctx.createLinearGradient(x,y,x+bw,y);
+      g.addColorStop(0, it.color);
+      g.addColorStop(1, hexA(it.color,0.55));
+      ctx.fillStyle=g;
+      roundRect(x,y+ (rowH-barH)/2, bw, barH, Math.min(barH/2,7));
+      ctx.fill();
+      // subtle top highlight
+      ctx.fillStyle='rgba(255,255,255,0.10)';
+      roundRect(x,y+(rowH-barH)/2, bw, barH*0.34, Math.min(barH/2,7));
+      ctx.fill();
+      // label
+      ctx.font=`700 ${Math.min(barH*0.62,20)}px Inter, sans-serif`;
+      ctx.fillStyle='#dbe4f5';ctx.textAlign='right';ctx.textBaseline='middle';
+      ctx.fillText(it.name, labelW-Math.max(12,W*0.012), y+rowH/2);
+      // value
+      ctx.textAlign='left';
+      ctx.font=`500 ${Math.min(barH*0.52,17)}px 'IBM Plex Mono', monospace`;
+      ctx.fillStyle=hexA(it.color,0.95);
+      ctx.fillText(Math.round(it.value), x+bw+Math.max(8,W*0.008), y+rowH/2);
+    }
+
+    // timeline scrub bar
+    const tw=W-Math.max(24,W*0.03)*2;
+    const tx=Math.max(24,W*0.03);
+    const ty=H-Math.max(26,H*0.05);
+    ctx.strokeStyle='rgba(120,150,220,0.18)';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(tx,ty);ctx.lineTo(tx+tw,ty);ctx.stroke();
+    const px=tx+(frame/STEPS)*tw;
+    ctx.strokeStyle='rgba(120,170,255,0.9)';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(tx,ty);ctx.lineTo(px,ty);ctx.stroke();
+    ctx.fillStyle='#7fb2ff';ctx.beginPath();ctx.arc(px,ty,4,0,7);ctx.fill();
+
+    requestAnimationFrame(loop);
+  }
+
+  function roundRect(x,y,w,h,r){
+    r=Math.min(r,h/2,w/2);
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r);
+    ctx.closePath();
+  }
+  function hexA(hex,a){
+    const n=parseInt(hex.slice(1),16);
+    return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
+  }
+
+  addEventListener('resize',resize);
+  resize();requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,159 @@
+<!-- Sand Sim — a falling-sand cellular automaton with layered coloured grains and walls -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sand Sim</title>
+<style>
+:root{color-scheme:dark}
+html,body{margin:0;height:100%;background:#05060a;overflow:hidden}
+canvas{display:block;width:100vw;height:100vh}
+.badge{position:fixed;left:14px;bottom:14px;z-index:9;font:12px/1.35 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  color:rgba(255,255,255,.5);background:rgba(10,12,20,.35);border:1px solid rgba(255,255,255,.1);
+  padding:6px 11px;border-radius:999px;backdrop-filter:blur(8px);letter-spacing:.03em}
+.badge a{color:rgba(220,200,170,.9);text-decoration:none}
+.badge a:hover{color:#fff}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="badge">Sand Sim &middot; <a href="index.html">&larr; Gallery</a></div>
+<script>
+(()=>{
+const c=document.getElementById('c');
+const ctx=c.getContext('2d',{alpha:false});
+let W=0,H=0,DPR=1;
+const CELL=6;
+
+const EMPTY=0,WALL=1;
+// material ids: 2..8 are coloured sands, 9 = stone/settled
+let GW=0,GH=0,grid,img,off,offctx;
+const COLORS=[[0,0,0],[92,96,112],[236,196,108],[226,138,86],[214,90,120],[150,110,220],[96,190,220],[140,220,150],[240,240,245]];
+let brush=2;
+const brushHue=[2,3,4,5,6,7,8];
+
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1,2);
+  W=window.innerWidth;H=window.innerHeight;
+  c.width=Math.floor(W*DPR);c.height=Math.floor(H*DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.fillStyle='#05060a';ctx.fillRect(0,0,W,H);
+  GW=Math.floor(W/CELL);GH=Math.floor(H/CELL);
+  grid=new Uint8Array(GW*GH);
+  off=document.createElement('canvas');off.width=GW;off.height=GH;
+  offctx=off.getContext('2d');
+  img=offctx.createImageData(GW,GH);
+  buildWalls();
+  seedSand();
+}
+function seedSand(){
+  for(let y=0;y<Math.floor(GH*0.55);y++){
+    const r=y*GW;
+    for(let x=0;x<GW;x++){
+      if(grid[r+x]===EMPTY&&Math.random()<0.085){
+        grid[r+x]=brushHue[(Math.random()*brushHue.length)|0];
+      }
+    }
+  }
+}
+function buildWalls(){
+  // floor
+  for(let x=0;x<GW;x++){grid[(GH-1)*GW+x]=WALL;grid[(GH-2)*GW+x]=WALL;}
+  // some platforms
+  const plats=[
+    [0.12,0.35,0.28,0.02],[0.58,0.28,0.30,0.02],
+    [0.30,0.55,0.30,0.02],[0.05,0.72,0.22,0.02],[0.72,0.68,0.24,0.02]
+  ];
+  for(const p of plats){
+    const x0=Math.floor(p[0]*GW),x1=Math.floor((p[0]+p[2])*GW),y=Math.floor(p[1]*GH);
+    for(let x=x0;x<x1;x++)if(x>=0&&x<GW&&y>=0&&y<GH)grid[y*GW+x]=WALL;
+  }
+}
+addEventListener('resize',resize);resize();
+
+const mouse={x:0,y:0,down:false,erase:false};
+addEventListener('pointermove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;});
+addEventListener('pointerdown',e=>{
+  mouse.down=true;mouse.x=e.clientX;mouse.y=e.clientY;
+  if(e.button===2)mouse.erase=true;
+  else {brush=brushHue[(Math.random()*brushHue.length)|0];}
+});
+addEventListener('pointerup',()=>{mouse.down=false;mouse.erase=false;});
+addEventListener('contextmenu',e=>e.preventDefault());
+addEventListener('pointerleave',()=>mouse.down=false);
+addEventListener('keydown',e=>{if(e.code==='Space')buildWalls();});
+
+function paint(gx,gy,radius,val){
+  for(let y=-radius;y<=radius;y++)for(let x=-radius;x<=radius;x++){
+    if(x*x+y*y>radius*radius)continue;
+    const ix=gx+x,iy=gy+y;
+    if(ix<0||ix>=GW||iy<0||iy>=GH)continue;
+    const i=iy*GW+ix;
+    if(val===EMPTY){grid[i]=EMPTY;}
+    else if(grid[i]===EMPTY){grid[i]=val;}
+  }
+}
+
+function step(){
+  for(let y=GH-2;y>=0;y--){
+    const r=y*GW;
+    const dir=Math.random()<0.5?1:-1;
+    for(let k=0;k<GW;k++){
+      const x=dir>0?k:GW-1-k;
+      const i=r+x;
+      const m=grid[i];
+      if(m<2)continue;
+      const below=i+GW;
+      if(grid[below]===EMPTY){grid[below]=m;grid[i]=EMPTY;continue;}
+      // diagonal
+      const dl=grid[below-1],dr=grid[below+1];
+      const canL=x>0&&dl===EMPTY;
+      const canR=x<GW-1&&dr===EMPTY;
+      if(canL&&canR){
+        if(dir>0){grid[below+1]=m;}else{grid[below-1]=m;}
+        grid[i]=EMPTY;
+      } else if(canL){grid[below-1]=m;grid[i]=EMPTY;}
+      else if(canR){grid[below+1]=m;grid[i]=EMPTY;}
+    }
+  }
+}
+
+function frame(){
+  if(mouse.down){
+    const gx=Math.floor(mouse.x/CELL),gy=Math.floor(mouse.y/CELL);
+    if(mouse.erase)paint(gx,gy,4,EMPTY);
+    else paint(gx,gy,4,brush);
+  }
+  step();
+  const d=img.data;
+  for(let i=0,p=0;i<GW*GH;i++,p+=4){
+    const m=grid[i];
+    let col=COLORS[m];
+    if(m===EMPTY){d[p]=6;d[p+1]=7;d[p+2]=12;d[p+3]=255;}
+    else{
+      // subtle grain shading by depth-ish noise
+      const s=((i*2654435761)>>>24)/255;
+      const v=0.86+s*0.24;
+      d[p]  = col[0]*v;
+      d[p+1]= col[1]*v;
+      d[p+2]= col[2]*v;
+      d[p+3]=255;
+    }
+  }
+  offctx.putImageData(img,0,0);
+  ctx.imageSmoothingEnabled=false;
+  ctx.drawImage(off,0,0,GW*CELL,GH*CELL);
+  // emitter hint: a soft glow at cursor
+  if(mouse.down&&!mouse.erase){
+    const g=ctx.createRadialGradient(mouse.x,mouse.y,0,mouse.x,mouse.y,60);
+    g.addColorStop(0,'rgba(255,255,255,0.10)');g.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(mouse.x,mouse.y,60,0,6.283);ctx.fill();
+  }
+  requestAnimationFrame(frame);
+}
+frame();
+})();
+</script>
+</body>
+</html>

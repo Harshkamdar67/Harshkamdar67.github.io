@@ -1,0 +1,116 @@
+<!-- svg-gooey — Metaball Gooey Merge -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gooey</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;background:#08040d;overflow:hidden}
+  body{font-family:'Space Mono',monospace;cursor:crosshair}
+  #stage{position:fixed;inset:0;width:100vw;height:100vh;display:block}
+  .badge{position:fixed;left:18px;bottom:18px;z-index:10;display:inline-flex;gap:10px;align-items:baseline;
+    padding:7px 14px;border:1px solid rgba(255,170,120,.2);border-radius:999px;background:rgba(24,8,16,.42);
+    -webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);color:rgba(255,214,190,.7);
+    text-decoration:none;font-size:10px;letter-spacing:.16em;text-transform:uppercase;opacity:.7;
+    transition:opacity .4s,border-color .4s}
+  .badge:hover{opacity:1;border-color:rgba(255,170,120,.55)}
+  .badge .t{font-family:'Bricolage Grotesque',sans-serif;font-size:15px;letter-spacing:.02em;text-transform:none;color:rgba(255,232,216,.95)}
+  .badge .g{color:rgba(255,214,190,.45)}
+</style>
+</head>
+<body>
+<svg id="stage" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-label="Gooey metaballs merging">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="46%" r="70%">
+      <stop offset="0%" stop-color="#1c0a1c"/>
+      <stop offset="58%" stop-color="#0d0512"/>
+      <stop offset="100%" stop-color="#08040d"/>
+    </radialGradient>
+    <linearGradient id="h1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ff4d8d"/>
+      <stop offset="100%" stop-color="#b01060"/>
+    </linearGradient>
+    <linearGradient id="h2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ff9a3c"/>
+      <stop offset="100%" stop-color="#d63a1e"/>
+    </linearGradient>
+    <linearGradient id="h3" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffd76b"/>
+      <stop offset="100%" stop-color="#e0651f"/>
+    </linearGradient>
+    <filter id="goo" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="20" result="b"/>
+      <feColorMatrix in="b" mode="matrix" result="goo"
+        values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -8"/>
+      <feBlend in="SourceGraphic" in2="goo" mode="screen"/>
+    </filter>
+    <filter id="bloom" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="46"/>
+    </filter>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <g id="bloomLayer" filter="url(#bloom)" style="mix-blend-mode:screen" opacity="0.5"></g>
+  <g id="gooLayer" filter="url(#goo)"></g>
+</svg>
+<a class="badge" href="index.html"><span class="t">Gooey</span><span class="g">&larr; Gallery</span></a>
+<script>
+(function(){
+  var NS="http://www.w3.org/2000/svg";
+  var svg=document.getElementById("stage");
+  var goo=document.getElementById("gooLayer"), bloom=document.getElementById("bloomLayer");
+  var W=1600,H=900, grads=["h1","h2","h3"];
+  var blobs=[];
+  function mk(){
+    var c=document.createElementNS(NS,"circle");
+    c.setAttribute("fill","url(#"+grads[Math.floor(Math.random()*3)]+")");
+    return c;
+  }
+  function add(x,y,r,vx,vy,host){
+    var c=mk(), b=document.createElementNS(NS,"circle");
+    b.setAttribute("fill",c.getAttribute("fill"));
+    host.appendChild(c); bloom.appendChild(b);
+    var o={x:x,y:y,r:r,vx:vx,vy:vy,c:c,b:b};
+    blobs.push(o); return o;
+  }
+  for(var i=0;i<15;i++){
+    var r=34+Math.random()*54;
+    add(Math.random()*W,Math.random()*H,r,(Math.random()-0.5)*1.5,(Math.random()-0.5)*1.5,goo);
+  }
+  var cur=add(800,450,46,0,0,goo); cur.isCursor=true;
+  var tx=800,ty=450;
+  window.addEventListener("pointermove",function(e){
+    var rc=svg.getBoundingClientRect();
+    tx=(e.clientX-rc.left)/rc.width*W; ty=(e.clientY-rc.top)/rc.height*H;
+  },{passive:true});
+  window.addEventListener("pointerdown",function(){
+    if(blobs.length<44){
+      var a=Math.random()*Math.PI*2;
+      add(tx,ty,24+Math.random()*30,Math.cos(a)*4,Math.sin(a)*4,goo);
+    }
+  });
+  function frame(now){
+    cur.x+=(tx-cur.x)*0.18; cur.y+=(ty-cur.y)*0.18;
+    var pulse=1+0.06*Math.sin(now/380);
+    for(var i=0;i<blobs.length;i++){
+      var o=blobs[i];
+      if(!o.isCursor){
+        o.x+=o.vx; o.y+=o.vy;
+        if(o.x<o.r){o.x=o.r;o.vx*=-1;} if(o.x>W-o.r){o.x=W-o.r;o.vx*=-1;}
+        if(o.y<o.r){o.y=o.r;o.vy*=-1;} if(o.y>H-o.r){o.y=H-o.r;o.vy*=-1;}
+      }
+      var rr=o.isCursor?o.r*pulse:o.r;
+      o.c.setAttribute("cx",o.x.toFixed(1)); o.c.setAttribute("cy",o.y.toFixed(1)); o.c.setAttribute("r",rr.toFixed(1));
+      o.b.setAttribute("cx",o.x.toFixed(1)); o.b.setAttribute("cy",o.y.toFixed(1)); o.b.setAttribute("r",rr.toFixed(1));
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

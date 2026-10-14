@@ -1,0 +1,125 @@
+<!-- Sierpinski — the chaos game, points accumulating into a glowing gasket -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sierpinski Chaos Game</title>
+<style>
+  html,body{margin:0;height:100%;background:#03030b;overflow:hidden;}
+  canvas#c{display:block;width:100vw;height:100vh;}
+  .badge{position:fixed;left:14px;bottom:14px;z-index:5;
+    font:12px/1.4 ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;
+    color:rgba(255,255,255,.6);background:rgba(6,6,20,.42);backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+    border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:7px 13px;letter-spacing:.03em;}
+  .badge a{color:rgba(255,255,255,.86);text-decoration:none;border-bottom:1px solid rgba(255,255,255,.28);}
+  .badge a:hover{color:#fff;}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="badge">Sierpinski &nbsp;&middot;&nbsp; <a href="index.html">&larr; Gallery</a></div>
+<script>
+(function(){
+'use strict';
+var cv=document.getElementById('c');
+var ctx=cv.getContext('2d',{alpha:false});
+var DPR=Math.min(window.devicePixelRatio||1,2);
+var W=0,H=0,R=0,CX=0,CY=0;
+function resize(){
+  W=Math.max(1,Math.floor(window.innerWidth*DPR));
+  H=Math.max(1,Math.floor(window.innerHeight*DPR));
+  cv.width=W; cv.height=H;
+  cv.style.width=window.innerWidth+'px'; cv.style.height=window.innerHeight+'px';
+  R=Math.min(W,H)*0.44; CX=W*0.5; CY=H*0.5;
+  ctx.fillStyle='#03030b'; ctx.fillRect(0,0,W,H);
+}
+window.addEventListener('resize',resize);
+resize();
+
+var n=3, verts=[], ratio=0.5, hues=[], rot0=0;
+var RATIOS=[0.5,0.46,0.55,0.41];
+var ri=0;
+function setN(){
+  verts=[]; hues=[];
+  for(var i=0;i<n;i++){
+    var a=-Math.PI/2+rot0+i/n*Math.PI*2;
+    verts.push([Math.cos(a),Math.sin(a)]);
+    hues.push((196+i*118)%360);
+  }
+  ratio=RATIOS[ri%RATIOS.length];
+  ctx.fillStyle='#03030b'; ctx.fillRect(0,0,W,H);
+  cx=Math.random()*2-1; cy=Math.random()*2-1;
+}
+var cx=0, cy=0;
+setN();
+
+window.addEventListener('pointerdown',function(){
+  ri++; rot0=Math.random()*6.28318;
+  setN();
+});
+
+var bucket=[], bucketLen=[];
+function allocBuckets(){
+  bucket=[]; bucketLen=[];
+  for(var i=0;i<8;i++){ bucket.push(new Float32Array(20000)); bucketLen.push(0); }
+}
+allocBuckets();
+
+var last=0, t=0;
+var PER=9000;
+
+function frame(now){
+  if(!last) last=now;
+  var dt=Math.min(0.05,(now-last)/1000); last=now;
+  t+=dt;
+
+  /* slow fade */
+  ctx.globalCompositeOperation='source-over';
+  ctx.fillStyle='rgba(3,3,11,0.008)';
+  ctx.fillRect(0,0,W,H);
+
+  for(var i=0;i<n;i++) bucketLen[i]=0;
+
+  for(var s=0;s<PER;s++){
+    var v=(Math.random()*n)|0;
+    cx=(cx+verts[v][0])*ratio;
+    cy=(cy+verts[v][1])*ratio;
+    var idx=bucketLen[v];
+    if(idx<20000){
+      bucket[v][idx*2]=CX+cx*R;
+      bucket[v][idx*2+1]=CY+cy*R;
+      bucketLen[v]=idx+1;
+    }
+  }
+
+  ctx.globalCompositeOperation='lighter';
+  var sz=Math.max(1,DPR*0.95);
+  for(var b=0;b<n;b++){
+    var arr=bucket[b], len=bucketLen[b];
+    ctx.fillStyle='hsla('+hues[b]+',95%,62%,0.22)';
+    for(var j=0;j<len;j++) ctx.fillRect(arr[j*2],arr[j*2+1],sz,sz);
+  }
+
+  /* vertices + current walker */
+  for(var b2=0;b2<n;b2++){
+    var vx=CX+verts[b2][0]*R, vy=CY+verts[b2][1]*R;
+    var g=ctx.createRadialGradient(vx,vy,0,vx,vy,Math.min(W,H)*0.011);
+    g.addColorStop(0,'hsla('+hues[b2]+',100%,82%,0.55)');
+    g.addColorStop(1,'hsla('+hues[b2]+',100%,60%,0)');
+    ctx.fillStyle=g;
+    ctx.beginPath(); ctx.arc(vx,vy,Math.min(W,H)*0.011,0,6.28318); ctx.fill();
+  }
+  var wx=CX+cx*R, wy=CY+cy*R;
+  ctx.fillStyle='rgba(255,255,255,0.9)';
+  ctx.beginPath(); ctx.arc(wx,wy,Math.max(1.5,DPR*1.4),0,6.28318); ctx.fill();
+
+  ctx.globalCompositeOperation='source-over';
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

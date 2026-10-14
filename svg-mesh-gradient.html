@@ -1,0 +1,110 @@
+<!-- svg-mesh-gradient — Turbulent Mesh Gradient Field -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mesh Gradient</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,500&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;background:#05060f;overflow:hidden}
+  body{font-family:'Space Mono',monospace}
+  #stage{position:fixed;inset:0;width:100vw;height:100vh;display:block}
+  .badge{position:fixed;left:18px;bottom:18px;z-index:10;display:inline-flex;gap:10px;align-items:baseline;
+    padding:7px 14px;border:1px solid rgba(200,225,255,.18);border-radius:999px;background:rgba(8,10,22,.45);
+    -webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);color:rgba(216,228,248,.7);
+    text-decoration:none;font-size:10px;letter-spacing:.16em;text-transform:uppercase;opacity:.7;
+    transition:opacity .4s,border-color .4s}
+  .badge:hover{opacity:1;border-color:rgba(200,225,255,.5)}
+  .badge .t{font-family:'Fraunces',serif;font-style:italic;font-size:15px;letter-spacing:.02em;text-transform:none;color:rgba(235,242,255,.95)}
+  .badge .g{color:rgba(216,228,248,.45)}
+</style>
+</head>
+<body>
+<svg id="stage" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-label="Animated turbulent mesh gradient">
+  <defs>
+    <filter id="warp" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+      <feTurbulence id="turb" type="fractalNoise" baseFrequency="0.0045 0.008" numOctaves="3" seed="11" result="n">
+        <animate attributeName="baseFrequency" dur="26s" repeatCount="indefinite"
+          values="0.0045 0.008; 0.008 0.005; 0.003 0.010; 0.0045 0.008"/>
+      </feTurbulence>
+      <feDisplacementMap id="disp" in="SourceGraphic" in2="n" scale="150" xChannelSelector="R" yChannelSelector="G"/>
+      <feGaussianBlur stdDeviation="16"/>
+    </filter>
+    <filter id="grainF">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.05"/></feComponentTransfer>
+    </filter>
+    <radialGradient id="m1" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#2fe6b4" stop-opacity="0.95"/>
+      <stop offset="60%" stop-color="#0d8f76" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#0d8f76" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="m2" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffc061" stop-opacity="0.95"/>
+      <stop offset="60%" stop-color="#e07a1f" stop-opacity="0.32"/>
+      <stop offset="100%" stop-color="#e07a1f" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="m3" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ff6f8b" stop-opacity="0.9"/>
+      <stop offset="60%" stop-color="#b02650" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#b02650" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="m4" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#6aa8ff" stop-opacity="0.9"/>
+      <stop offset="60%" stop-color="#1b46a8" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#1b46a8" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="m5" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#c58bff" stop-opacity="0.75"/>
+      <stop offset="100%" stop-color="#5a2fae" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vig" cx="50%" cy="50%" r="72%">
+      <stop offset="55%" stop-color="#000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000" stop-opacity="0.6"/>
+    </radialGradient>
+  </defs>
+  <rect width="1600" height="900" fill="#05060f"/>
+  <g id="mesh" filter="url(#warp)" style="mix-blend-mode:screen">
+    <circle id="b1" cx="380" cy="300" r="520" fill="url(#m1)"/>
+    <circle id="b2" cx="1180" cy="270" r="500" fill="url(#m2)"/>
+    <circle id="b3" cx="760" cy="640" r="540" fill="url(#m3)"/>
+    <circle id="b4" cx="1360" cy="660" r="440" fill="url(#m4)"/>
+    <circle id="b5" cx="250" cy="700" r="420" fill="url(#m5)"/>
+  </g>
+  <rect width="1600" height="900" fill="url(#vig)"/>
+  <rect width="1600" height="900" filter="url(#grainF)" style="mix-blend-mode:overlay" opacity="0.65"/>
+</svg>
+<a class="badge" href="index.html"><span class="t">Mesh Gradient</span><span class="g">&larr; Gallery</span></a>
+<script>
+(function(){
+  var svg=document.getElementById("stage");
+  var defs={b1:[380,300,520],b2:[1180,270,500],b3:[760,640,540],b4:[1360,660,440],b5:[250,700,420]};
+  var els={}; for(var k in defs)els[k]=document.getElementById(k);
+  var mx=0,my=0,tx=0,ty=0;
+  window.addEventListener("pointermove",function(e){
+    var r=svg.getBoundingClientRect();
+    tx=((e.clientX-r.left)/r.width-0.5)*2; ty=((e.clientY-r.top)/r.height-0.5)*2;
+  },{passive:true});
+  var disp=document.getElementById("disp");
+  function frame(now){
+    mx+=(tx-mx)*0.05; my+=(ty-my)*0.05;
+    var t=now/1000;
+    for(var k in defs){
+      var d=defs[k],el=els[k],ph=(k.charCodeAt(1))*1.3;
+      el.setAttribute("cx",(d[0]+Math.sin(t*0.18+ph)*130+mx*40).toFixed(1));
+      el.setAttribute("cy",(d[1]+Math.cos(t*0.15+ph*1.4)*110+my*40).toFixed(1));
+      el.setAttribute("r",(d[2]*(1+0.08*Math.sin(t*0.25+ph))).toFixed(1));
+    }
+    disp.setAttribute("scale",(150+Math.abs(mx)*70).toFixed(1));
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,119 @@
+<!-- Slime Mold — a physarum transport network self-organizing into living veins -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Slime Mold</title>
+<style>
+:root{color-scheme:dark}
+html,body{margin:0;height:100%;background:#03060a;overflow:hidden}
+canvas{display:block;width:100vw;height:100vh}
+.badge{position:fixed;left:14px;bottom:14px;z-index:9;font:12px/1.35 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  color:rgba(255,255,255,.5);background:rgba(8,12,16,.35);border:1px solid rgba(255,255,255,.1);
+  padding:6px 11px;border-radius:999px;backdrop-filter:blur(8px);letter-spacing:.03em}
+.badge a{color:rgba(150,240,220,.9);text-decoration:none}
+.badge a:hover{color:#fff}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="badge">Slime Mold &middot; <a href="index.html">&larr; Gallery</a></div>
+<script>
+(()=>{
+const c=document.getElementById('c');
+const ctx=c.getContext('2d',{alpha:false});
+let W=0,H=0,DPR=1;
+
+let GW=0,GH=0,trail,tmp,img,off,offctx;
+const AGENTS=16000;
+const ax=new Float32Array(AGENTS),ay=new Float32Array(AGENTS),aa=new Float32Array(AGENTS);
+const SENSE=9.5,SENSE_A=0.6,STEP=1.05,DEPOSIT=1.15,DECAY=0.96;
+
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1,2);
+  W=window.innerWidth;H=window.innerHeight;
+  c.width=Math.floor(W*DPR);c.height=Math.floor(H*DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.fillStyle='#03060a';ctx.fillRect(0,0,W,H);
+  GW=340;GH=Math.max(80,Math.round(GW*H/W));
+  const n=GW*GH;
+  trail=new Float32Array(n);tmp=new Float32Array(n);
+  off=document.createElement('canvas');off.width=GW;off.height=GH;
+  offctx=off.getContext('2d');
+  img=offctx.createImageData(GW,GH);
+  for(let i=0;i<AGENTS;i++){
+    ax[i]=Math.random()*GW;ay[i]=Math.random()*GH;aa[i]=Math.random()*6.283;
+  }
+}
+addEventListener('resize',resize);resize();
+
+const mouse={x:0,y:0,down:false};
+addEventListener('pointermove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;});
+addEventListener('pointerdown',e=>{mouse.down=true;mouse.x=e.clientX;mouse.y=e.clientY;});
+addEventListener('pointerup',()=>mouse.down=false);
+addEventListener('pointerleave',()=>mouse.down=false);
+
+function sense(gx,gy,ang){
+  const fx=gx+Math.cos(ang)*SENSE, fy=gy+Math.sin(ang)*SENSE;
+  let ix=fx|0,iy=fy|0;
+  ix=((ix%GW)+GW)%GW;iy=((iy%GH)+GH)%GH;
+  return trail[iy*GW+ix];
+}
+
+function frame(){
+  // diffuse (separable light blur)
+  for(let y=0;y<GH;y++){
+    const r=y*GW;
+    for(let x=0;x<GW;x++){
+      const l=trail[r+((x-1+GW)%GW)],rr=trail[r+((x+1)%GW)];
+      tmp[r+x]=(l+2*trail[r+x]+rr)*0.25;
+    }
+  }
+  for(let y=0;y<GH;y++){
+    const up=((y-1+GH)%GH)*GW,dn=((y+1)%GH)*GW,r=y*GW;
+    for(let x=0;x<GW;x++){
+      trail[r+x]=(tmp[up+x]+2*tmp[r+x]+tmp[dn+x])*0.25*DECAY;
+    }
+  }
+  // agents
+  const mdown=mouse.down;
+  const mgx=mouse.x/W*GW,mgy=mouse.y/H*GH;
+  for(let i=0;i<AGENTS;i++){
+    let x=ax[i],y=ay[i],ang=aa[i];
+    const f=sense(x,y,ang),l=sense(x,y,ang-SENSE_A),r=sense(x,y,ang+SENSE_A);
+    if(f>l&&f>r){/*keep*/}
+    else if(l>r)ang-=SENSE_A*1.4;
+    else if(r>l)ang+=SENSE_A*1.4;
+    else ang+=(Math.random()-0.5)*1.2;
+    if(mdown){
+      const dx=mgx-x,dy=mgy-y,d2=dx*dx+dy*dy;
+      if(d2<2600&&d2>1){const d=Math.sqrt(d2);ang=ang*0.7+Math.atan2(dy,dx)*0.3;}
+    }
+    x+=Math.cos(ang)*STEP;y+=Math.sin(ang)*STEP;
+    if(x<0)x+=GW;else if(x>=GW)x-=GW;
+    if(y<0)y+=GH;else if(y>=GH)y-=GH;
+    ax[i]=x;ay[i]=y;aa[i]=ang;
+    const ix=x|0,iy=y|0;
+    trail[iy*GW+ix]+=DEPOSIT;
+  }
+  const d=img.data;
+  for(let i=0,p=0;i<GW*GH;i++,p+=4){
+    let t=trail[i]*0.16;
+    if(t>1)t=1;
+    const tt=t*t;
+    d[p]  = 3 + tt*60 + t*8;
+    d[p+1]= 8 + t*225;
+    d[p+2]= 16 + t*140 + tt*105;
+    d[p+3]=255;
+  }
+  offctx.putImageData(img,0,0);
+  ctx.imageSmoothingEnabled=true;
+  ctx.drawImage(off,0,0,W,H);
+  requestAnimationFrame(frame);
+}
+frame();
+})();
+</script>
+</body>
+</html>

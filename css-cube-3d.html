@@ -1,0 +1,101 @@
+<!-- Concept 52 · CSS Cube 3D — rotating preserve-3d cube carousel with typographic faces -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CSS Cube 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;800;900&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%}
+  body{
+    background:radial-gradient(120% 120% at 50% 30%,#101a3a 0%,#080b1c 45%,#03040a 100%);
+    color:#eaf0ff;font-family:"Archivo",system-ui,sans-serif;overflow:hidden;
+    display:grid;place-items:center;perspective:1400px;
+  }
+  .stage{transform-style:preserve-3d;will-change:transform}
+  .cube{
+    --s:clamp(180px,26vmin,300px);
+    position:relative;width:var(--s);height:var(--s);
+    transform-style:preserve-3d;
+    animation:spin 22s linear infinite;
+  }
+  .cube:hover{animation-play-state:paused}
+  .face{
+    position:absolute;inset:0;display:grid;place-items:center;
+    border:1px solid rgba(140,190,255,.35);
+    box-shadow:inset 0 0 60px rgba(90,150,255,.25),0 0 40px rgba(0,80,200,.18);
+    font-weight:900;font-size:calc(var(--s)*.34);letter-spacing:.02em;
+    color:rgba(255,255,255,.94);text-shadow:0 0 30px rgba(120,180,255,.7);
+    backface-visibility:hidden;
+  }
+  .face::after{content:attr(data-k);position:absolute;bottom:8%;font-family:"Space Mono",monospace;
+    font-size:calc(var(--s)*.055);letter-spacing:.4em;opacity:.55;font-weight:400}
+  .f1{transform:translateZ(calc(var(--s)/2));background:linear-gradient(135deg,#1b2a6b,#0a1140 60%,#2563eb)}
+  .f2{transform:rotateY(90deg) translateZ(calc(var(--s)/2));background:linear-gradient(135deg,#0a1140,#123a6b 55%,#00d4ff)}
+  .f3{transform:rotateY(180deg) translateZ(calc(var(--s)/2));background:linear-gradient(135deg,#2a1150,#3b1d7a 55%,#a855f7)}
+  .f4{transform:rotateY(-90deg) translateZ(calc(var(--s)/2));background:linear-gradient(135deg,#0b2b4a,#0e6b7a 55%,#22d3ee)}
+  .f5{transform:rotateX(90deg) translateZ(calc(var(--s)/2));background:linear-gradient(135deg,#101a3a,#1e2f7a 55%,#60a5fa)}
+  .f6{transform:rotateX(-90deg) translateZ(calc(var(--s)/2));background:linear-gradient(135deg,#031033,#0a2a55 55%,#38bdf8)}
+  @keyframes spin{
+    from{transform:rotateX(-18deg) rotateY(0deg)}
+    to{transform:rotateX(-18deg) rotateY(360deg)}
+  }
+  .grid{position:fixed;inset:0;pointer-events:none;opacity:.5;
+    background:
+      linear-gradient(rgba(120,170,255,.06) 1px,transparent 1px) 0 0/100% 46px,
+      linear-gradient(90deg,rgba(120,170,255,.06) 1px,transparent 1px) 0 0/46px 100%;
+    mask-image:radial-gradient(70% 70% at 50% 50%,#000 25%,transparent 78%)}
+  .floor{position:fixed;left:50%;top:72%;width:60vmin;height:60vmin;transform:translate(-50%,-50%) rotateX(78deg);
+    background:conic-gradient(from 0deg,transparent,rgba(80,150,255,.16),transparent 40%);
+    filter:blur(22px);animation:spin 12s linear infinite reverse}
+  .tag{position:fixed;left:50%;top:14%;transform:translateX(-50%);text-align:center;pointer-events:none}
+  .tag h1{font-weight:900;font-size:clamp(1.4rem,4.5vw,3rem);letter-spacing:.24em;text-transform:uppercase}
+  .tag span{font-family:"Space Mono",monospace;font-size:.68rem;letter-spacing:.5em;opacity:.6}
+  .badge{position:fixed;bottom:1.1rem;left:1.1rem;z-index:20;font-family:"Space Mono",monospace;
+    font-size:.62rem;letter-spacing:.16em;text-transform:uppercase;
+    background:rgba(8,12,28,.45);border:1px solid rgba(140,190,255,.22);border-radius:999px;
+    padding:.5rem .85rem;backdrop-filter:blur(8px);color:rgba(230,240,255,.72)}
+  .badge a{color:#fff;text-decoration:none}
+  .badge a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+  <div class="floor"></div>
+  <div class="grid"></div>
+  <div class="stage">
+    <div class="cube" id="cube">
+      <div class="face f1" data-k="FRONT">A</div>
+      <div class="face f2" data-k="RIGHT">E</div>
+      <div class="face f3" data-k="BACK">I</div>
+      <div class="face f4" data-k="LEFT">O</div>
+      <div class="face f5" data-k="TOP">U</div>
+      <div class="face f6" data-k="BOTTOM">Y</div>
+    </div>
+  </div>
+  <div class="tag"><h1>Axis</h1><span>drag to orbit</span></div>
+  <div class="badge">CSS Cube 3D &nbsp;·&nbsp; <a href="index.html">&larr; Gallery</a></div>
+  <script>
+    const cube=document.getElementById('cube');
+    let drag=false,lx=0,ly=0,ry=0,rx=-18,vel=.35,auto=true;
+    addEventListener('pointerdown',e=>{drag=true;auto=false;lx=e.clientX;ly=e.clientY;},{passive:true});
+    addEventListener('pointerup',()=>drag=false);
+    addEventListener('pointermove',e=>{
+      if(!drag)return;
+      ry+=(e.clientX-lx)*.4; rx-=(e.clientY-ly)*.4;
+      rx=Math.max(-70,Math.min(70,rx)); lx=e.clientX; ly=e.clientY;
+      cube.style.animation='none';
+      cube.style.transform=`rotateX(${rx}deg) rotateY(${ry}deg)`;
+    },{passive:true});
+    addEventListener('pointerleave',()=>drag=false);
+    (function loop(){
+      if(auto){ry+=vel; cube.style.transform=`rotateX(${rx}deg) rotateY(${ry}deg)`;}
+      else if(!drag){vel*=.94; ry+=vel;}
+      requestAnimationFrame(loop);
+    })();
+  </script>
+</body>
+</html>

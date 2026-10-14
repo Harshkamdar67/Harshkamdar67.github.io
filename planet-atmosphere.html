@@ -1,0 +1,132 @@
+<!-- Planet Atmosphere - shaded planet with fresnel rim glow, tilted ring and starfield -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Planet Atmosphere</title>
+<style>
+html,body{margin:0;height:100%;background:#02030a;overflow:hidden}
+#c{display:block;width:100vw;height:100vh}
+.badge{position:fixed;left:18px;bottom:16px;z-index:5;font:11px/1.5 ui-monospace,Menlo,monospace;
+letter-spacing:.16em;color:rgba(190,225,255,.55);text-transform:uppercase}
+.badge a{color:rgba(140,220,255,.9);text-decoration:none}
+.badge a:hover{color:#fff}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="badge">Planet Atmosphere &middot; <a href="index.html">&larr; Gallery</a></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+"use strict";
+var scene=new THREE.Scene();
+scene.background=new THREE.Color(0x02030a);
+var camera=new THREE.PerspectiveCamera(45,innerWidth/innerHeight,0.1,4000);
+var renderer=new THREE.WebGLRenderer({canvas:document.getElementById('c'),antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
+renderer.setSize(innerWidth,innerHeight);
+if(THREE.sRGBEncoding) renderer.outputEncoding=THREE.sRGBEncoding;
+
+scene.add(new THREE.AmbientLight(0x334466,0.9));
+var sun=new THREE.DirectionalLight(0xfff2dc,2.1); sun.position.set(12,8,10); scene.add(sun);
+var rim=new THREE.DirectionalLight(0x2f6bff,0.8); rim.position.set(-14,-4,-8); scene.add(rim);
+
+function planetTex(){
+  var w=1024,h=512,cv=document.createElement('canvas');cv.width=w;cv.height=h;
+  var g=cv.getContext('2d');
+  var gr=g.createLinearGradient(0,0,0,h);
+  gr.addColorStop(0,'#0a2140');gr.addColorStop(0.5,'#0d2b52');gr.addColorStop(1,'#0a2140');
+  g.fillStyle=gr;g.fillRect(0,0,w,h);
+  for(var i=0;i<46;i++){
+    var x=Math.random()*w,y=60+Math.random()*(h-120);
+    var r=20+Math.random()*70;
+    var rg=g.createRadialGradient(x,y,0,x,y,r);
+    var c=['#2f7a45','#4f8f52','#8a7b4a','#3f6f7a'][i%4];
+    rg.addColorStop(0,c);rg.addColorStop(1,'rgba(0,0,0,0)');
+    g.globalAlpha=0.75;g.fillStyle=rg;g.beginPath();
+    g.ellipse(x,y,r,r*(0.5+Math.random()*0.6),Math.random()*3,0,Math.PI*2);g.fill();
+  }
+  g.globalAlpha=0.9;g.fillStyle='#eef4ff';
+  g.fillRect(0,0,w,26);g.fillRect(0,h-26,w,26);
+  for(var j=0;j<70;j++){
+    var x2=Math.random()*w,y2=Math.random()*h,r2=10+Math.random()*50;
+    var rg2=g.createRadialGradient(x2,y2,0,x2,y2,r2);
+    rg2.addColorStop(0,'rgba(255,255,255,0.5)');rg2.addColorStop(1,'rgba(255,255,255,0)');
+    g.globalAlpha=0.5;g.fillStyle=rg2;g.fillRect(x2-r2,y2-r2,r2*2,r2*2);
+  }
+  g.globalAlpha=1;
+  return new THREE.CanvasTexture(cv);
+}
+
+var group=new THREE.Group(); scene.add(group);
+group.rotation.z=0.34; group.rotation.x=0.22;
+
+var R=5;
+var planet=new THREE.Mesh(new THREE.SphereGeometry(R,64,64),
+  new THREE.MeshStandardMaterial({map:planetTex(),roughness:0.92,metalness:0.05}));
+group.add(planet);
+
+var atmo=new THREE.Mesh(new THREE.SphereGeometry(R*1.16,64,64),new THREE.ShaderMaterial({
+  transparent:true, blending:THREE.AdditiveBlending, side:THREE.BackSide, depthWrite:false,
+  uniforms:{uCol:{value:new THREE.Color(0x54b8ff)}},
+  vertexShader:'varying vec3 vN;varying vec3 vV;void main(){vec4 wp=modelMatrix*vec4(position,1.0);vN=normalize(mat3(modelMatrix)*normal);vV=normalize(cameraPosition-wp.xyz);gl_Position=projectionMatrix*viewMatrix*wp;}',
+  fragmentShader:'uniform vec3 uCol;varying vec3 vN;varying vec3 vV;void main(){float f=pow(1.0-abs(dot(vN,vV)),2.6);gl_FragColor=vec4(uCol*f*1.8,f*1.1);}'
+}));
+group.add(atmo);
+
+var RIN=7.6, ROUT=12.4;
+var ring=new THREE.Mesh(new THREE.RingGeometry(RIN,ROUT,160,1),new THREE.ShaderMaterial({
+  transparent:true, depthWrite:false, side:THREE.DoubleSide, blending:THREE.AdditiveBlending,
+  uniforms:{uCol:{value:new THREE.Color(0xe8d9a8)},uIn:{value:RIN},uOut:{value:ROUT}},
+  vertexShader:'varying vec3 vP;void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
+  fragmentShader:[
+  'uniform vec3 uCol;uniform float uIn;uniform float uOut;varying vec3 vP;',
+  'void main(){float r=length(vP.xy);float t=(r-uIn)/(uOut-uIn);',
+  ' if(t<0.0||t>1.0) discard;',
+  ' float bands=0.5+0.5*sin(t*52.0);',
+  ' float edge=smoothstep(0.0,0.05,t)*smoothstep(1.0,0.9,t);',
+  ' float gap=smoothstep(0.44,0.47,t)*(1.0-smoothstep(0.53,0.56,t));',
+  ' float a=edge*(1.0-gap*0.9)*bands*0.9;',
+  ' gl_FragColor=vec4(uCol*(0.6+bands*0.9),a);}'].join('\n')
+}));
+ring.rotation.x=Math.PI/2;
+group.add(ring);
+
+var sN=3600,sp=new Float32Array(sN*3),sc=new Float32Array(sN*3),ct=new THREE.Color();
+for(var s=0;s<sN;s++){
+  var th=Math.acos(2*Math.random()-1),ph=Math.random()*Math.PI*2,r=600+Math.random()*900;
+  sp[s*3]=Math.sin(th)*Math.cos(ph)*r;
+  sp[s*3+1]=Math.cos(th)*r;
+  sp[s*3+2]=Math.sin(th)*Math.sin(ph)*r;
+  ct.setHSL(0.55+Math.random()*0.12,0.5,0.6+Math.random()*0.4);
+  sc[s*3]=ct.r;sc[s*3+1]=ct.g;sc[s*3+2]=ct.b;
+}
+var sg=new THREE.BufferGeometry();
+sg.setAttribute('position',new THREE.BufferAttribute(sp,3));
+sg.setAttribute('color',new THREE.BufferAttribute(sc,3));
+scene.add(new THREE.Points(sg,new THREE.PointsMaterial({size:2.2,vertexColors:true,transparent:true,
+  opacity:0.95,depthWrite:false,sizeAttenuation:true})));
+
+var mx=0,my=0,tx=0,ty=0;
+addEventListener('mousemove',function(e){mx=(e.clientX/innerWidth-0.5)*2;my=(e.clientY/innerHeight-0.5)*2;});
+addEventListener('resize',function(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+
+var clock=new THREE.Clock();
+function animate(){
+  requestAnimationFrame(animate);
+  var t=clock.getElapsedTime();
+  tx+=(mx-tx)*0.05; ty+=(my-ty)*0.05;
+  planet.rotation.y=t*0.06;
+  var a=t*0.05+tx*0.8;
+  var rad=34;
+  camera.position.set(Math.sin(a)*rad,Math.sin(a*0.7)*6-ty*10+4,Math.cos(a)*rad);
+  camera.lookAt(0,0,0);
+  renderer.render(scene,camera);
+}
+animate();
+})();
+</script>
+</body>
+</html>

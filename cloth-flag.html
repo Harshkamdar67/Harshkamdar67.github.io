@@ -1,0 +1,293 @@
+<!-- Concept 39: Waving Flag — a Verlet fabric flag with a gold emblem, fluttering and folding in the wind -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Waving Flag</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;background:#0b0710}
+  canvas{display:block;width:100vw;height:100vh}
+  .badge{
+    position:fixed;left:14px;bottom:14px;z-index:10;
+    font:600 10px/1.3 'Inter',system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;
+    color:rgba(255,225,235,.66);background:rgba(24,10,18,.42);
+    border:1px solid rgba(255,150,190,.2);padding:7px 12px;border-radius:999px;
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    display:flex;gap:10px;align-items:center;pointer-events:none;white-space:nowrap;
+  }
+  .badge a{pointer-events:auto;color:rgba(255,160,190,.92);text-decoration:none;transition:color .2s}
+  .badge a:hover{color:#fff}
+  .badge .sep{opacity:.35}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="badge"><span>Waving Flag</span><span class="sep">/</span><a href="index.html">&larr; Gallery</a></div>
+<script>
+(() => {
+  'use strict';
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W = 0, H = 0, DPR = 1;
+
+  const COLS = 42, ROWS = 26;
+  const GRAV = 130;
+  const FRICTION = 0.986;
+  const ITER = 5;
+
+  const pts = [];
+  const cons = [];
+  let sp = 1, poleX = 0, topY = 0, flagH = 0, flagW = 0;
+  let t = 0;
+
+  const idx = (x, y) => y * COLS + x;
+
+  function build() {
+    pts.length = 0; cons.length = 0;
+    poleX = Math.max(48, W * 0.13);
+    topY = H * 0.26;
+    flagH = Math.min(H * 0.42, W * 0.30);
+    flagW = Math.min(W * 0.60, flagH * 1.55);
+    sp = flagW / (COLS - 1);
+    const rowH = flagH / (ROWS - 1);
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        const px = poleX + x * sp;
+        const py = topY + y * rowH;
+        pts.push({ x: px, y: py, ox: px, oy: py, pinned: x === 0, bx: x, by: y });
+      }
+    }
+    const link = (a, b, rest) => cons.push({ a, b, len: rest });
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        if (x < COLS - 1) link(idx(x, y), idx(x + 1, y), sp);
+        if (y < ROWS - 1) link(idx(x, y), idx(x, y + 1), rowH);
+      }
+    }
+  }
+
+  // ---- wind field ----
+  const mouse = { x: 0, y: 0, active: false };
+  function windAt(x, y) {
+    const base = 300;
+    const gust = Math.sin(t * 1.1 - x * 0.012) * 0.6
+               + Math.sin(t * 2.9 - y * 0.02 + 1.2) * 0.35
+               + Math.sin(t * 5.1 - x * 0.03 + y * 0.02) * 0.22;
+    let wx = base * (0.6 + 0.6 * (gust + 0.9));
+    // mouse wind: pointer pushes fabric horizontally
+    if (mouse.active) {
+      const dx = mouse.x - x, dy = mouse.y - y;
+      const d = Math.hypot(dx, dy);
+      if (d < 280) wx += (1 - d / 280) * 1200 * (dx > 0 ? 1 : -1) * 0.5;
+    }
+    return wx;
+  }
+  function windY(x, y) {
+    const u = Math.max(0, (x - poleX) / flagW);
+    const wave = Math.sin(x * 0.022 - t * 3.4) * 0.75
+               + Math.sin(x * 0.050 - t * 6.0 + y * 0.010) * 0.35
+               + Math.sin(x * 0.010 - t * 1.9) * 0.30;
+    return wave * 950 * u;   // transverse flutter, growing toward the free edge
+  }
+
+  let drag = null;
+  function evt(e) { const t2 = e.touches ? e.touches[0] : e; return { x: t2.clientX, y: t2.clientY }; }
+  function down(e) {
+    const p = evt(e); mouse.x = p.x; mouse.y = p.y; mouse.active = true;
+    let best = -1, bd = 1e9;
+    for (let i = 0; i < pts.length; i++) {
+      const q = pts[i];
+      if (q.pinned) continue;
+      const d = (q.x - p.x) ** 2 + (q.y - p.y) ** 2;
+      if (d < bd) { bd = d; best = i; }
+    }
+    if (bd < (sp * 2.6) ** 2) drag = best;
+    e.preventDefault();
+  }
+  function move(e) { const p = evt(e); mouse.x = p.x; mouse.y = p.y; mouse.active = true; }
+  function up() { drag = null; mouse.active = false; }
+  canvas.addEventListener('mousedown', down);
+  window.addEventListener('mousemove', move);
+  window.addEventListener('mouseup', up);
+  canvas.addEventListener('touchstart', down, { passive: false });
+  window.addEventListener('touchmove', move, { passive: false });
+  window.addEventListener('touchend', up);
+
+  function step(dt) {
+    t += dt;
+    const dt2 = dt * dt;
+    for (const p of pts) {
+      if (p.pinned) { p.ox = p.x; p.oy = p.y; continue; }
+      const vx = (p.x - p.ox) * FRICTION;
+      const vy = (p.y - p.oy) * FRICTION;
+      p.ox = p.x; p.oy = p.y;
+      const ax = windAt(p.x, p.y) + Math.sin(t * 5.0 + p.by * 0.6 + p.bx * 0.25) * 170;
+      p.x += vx + ax * dt2;
+      p.y += vy + (GRAV + windY(p.x, p.y)) * dt2;
+    }
+    if (drag !== null) { const p = pts[drag]; if (!p.pinned) { p.x = mouse.x; p.y = mouse.y; } }
+    for (let k = 0; k < ITER; k++) {
+      for (let i = 0; i < cons.length; i++) {
+        const c = cons[i];
+        const a = pts[c.a], b = pts[c.b];
+        let dx = b.x - a.x, dy = b.y - a.y;
+        let d = Math.hypot(dx, dy) || 1e-6;
+        const diff = (d - c.len) / d * 0.5;
+        const ox = dx * diff, oy = dy * diff;
+        if (!a.pinned) { a.x += ox; a.y += oy; }
+        if (!b.pinned) { b.x -= ox; b.y -= oy; }
+      }
+      for (let y = 0; y < ROWS; y++) {
+        const p = pts[idx(0, y)];
+        p.x = poleX; p.y = topY + y * (flagH / (ROWS - 1));
+      }
+    }
+  }
+
+  // band palette (u -> colour)
+  function bandColor(u) {
+    const stops = [
+      [0.00, [92, 10, 36]],
+      [0.42, [176, 24, 74]],
+      [0.72, [230, 62, 96]],
+      [1.00, [255, 148, 120]]
+    ];
+    for (let i = 0; i < stops.length - 1; i++) {
+      const a = stops[i], b = stops[i + 1];
+      if (u <= b[0]) {
+        const f = (u - a[0]) / (b[0] - a[0] || 1);
+        return [
+          a[1][0] + (b[1][0] - a[1][0]) * f,
+          a[1][1] + (b[1][1] - a[1][1]) * f,
+          a[1][2] + (b[1][2] - a[1][2]) * f
+        ];
+      }
+    }
+    return stops[stops.length - 1][1];
+  }
+
+  function mapUV(u, v) {
+    const fx = Math.min(COLS - 1.001, Math.max(0, u * (COLS - 1)));
+    const fy = Math.min(ROWS - 1.001, Math.max(0, v * (ROWS - 1)));
+    const x0 = Math.floor(fx), y0 = Math.floor(fy);
+    const tx = fx - x0, ty = fy - y0;
+    const p00 = pts[idx(x0, y0)], p10 = pts[idx(x0 + 1, y0)];
+    const p01 = pts[idx(x0, y0 + 1)], p11 = pts[idx(x0 + 1, y0 + 1)];
+    const ax = p00.x + (p10.x - p00.x) * tx, ay = p00.y + (p10.y - p00.y) * tx;
+    const bx = p01.x + (p11.x - p01.x) * tx, by = p01.y + (p11.y - p01.y) * tx;
+    return { x: ax + (bx - ax) * ty, y: ay + (by - ay) * ty };
+  }
+
+  function render() {
+    ctx.fillStyle = 'rgba(11,7,16,0.34)';
+    ctx.fillRect(0, 0, W, H);
+
+    // pole
+    const poleTop = topY - flagH * 0.16;
+    const poleBot = topY + flagH + flagH * 0.42;
+    const pg = ctx.createLinearGradient(poleX - 8, 0, poleX + 8, 0);
+    pg.addColorStop(0, '#2a2430'); pg.addColorStop(0.4, '#6a6070'); pg.addColorStop(0.6, '#b9b2c4'); pg.addColorStop(1, '#2a2430');
+    ctx.fillStyle = pg;
+    ctx.fillRect(poleX - 5, poleTop, 10, poleBot - poleTop);
+    ctx.beginPath(); ctx.arc(poleX, poleTop, 9, 0, 6.2832);
+    ctx.fillStyle = '#e9c46a'; ctx.fill();
+
+    // flag cells (shaded fabric)
+    const rowH = flagH / (ROWS - 1);
+    for (let y = 0; y < ROWS - 1; y++) {
+      for (let x = 0; x < COLS - 1; x++) {
+        const a = pts[idx(x, y)], b = pts[idx(x + 1, y)], c = pts[idx(x + 1, y + 1)], d = pts[idx(x, y + 1)];
+        const u = x / (COLS - 1);
+        // fold shading from horizontal compression
+        const stretch = Math.hypot(b.x - a.x, b.y - a.y) / sp;
+        const shade = 0.55 + Math.max(0, Math.min(1.6, stretch)) * 0.55;
+        const col = bandColor(u);
+        const r = Math.min(255, col[0] * shade);
+        const g = Math.min(255, col[1] * shade);
+        const bl = Math.min(255, col[2] * shade);
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineTo(c.x, c.y); ctx.lineTo(d.x, d.y);
+        ctx.closePath();
+        ctx.fillStyle = 'rgb(' + (r | 0) + ',' + (g | 0) + ',' + (bl | 0) + ')';
+        ctx.fill();
+      }
+    }
+
+    // satin sheen along the top fold line
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.beginPath();
+    for (let x = 0; x < COLS; x++) { const p = pts[idx(x, 1)]; if (x === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); }
+    ctx.strokeStyle = 'rgba(255,200,210,0.10)';
+    ctx.lineWidth = 6; ctx.stroke();
+    ctx.globalCompositeOperation = 'source-over';
+
+    // emblem, clipped to the fabric
+    ctx.save();
+    ctx.beginPath();
+    for (let x = 0; x < COLS; x++) { const p = pts[idx(x, 0)]; if (x === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); }
+    for (let x = COLS - 1; x >= 0; x--) { const p = pts[idx(x, ROWS - 1)]; ctx.lineTo(p.x, p.y); }
+    ctx.closePath();
+    ctx.clip();
+
+    ctx.globalCompositeOperation = 'lighter';
+    // ring
+    const cu = 0.60, cv = 0.5, rad = 0.15;
+    ctx.beginPath();
+    for (let i = 0; i <= 60; i++) {
+      const ang = i / 60 * Math.PI * 2;
+      const m = mapUV(cu + Math.cos(ang) * rad * 0.82, cv + Math.sin(ang) * rad);
+      if (i === 0) ctx.moveTo(m.x, m.y); else ctx.lineTo(m.x, m.y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = 'rgba(255,214,120,0.85)';
+    ctx.lineWidth = 2.4; ctx.stroke();
+
+    // 5-point star
+    ctx.beginPath();
+    for (let i = 0; i <= 10; i++) {
+      const ang = -Math.PI / 2 + i * Math.PI / 5;
+      const rr = (i % 2 === 0 ? 0.115 : 0.048);
+      const m = mapUV(cu + Math.cos(ang) * rr * 0.82, cv + Math.sin(ang) * rr);
+      if (i === 0) ctx.moveTo(m.x, m.y); else ctx.lineTo(m.x, m.y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(255,222,140,0.92)';
+    ctx.fill();
+    ctx.restore();
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width = Math.floor(W * DPR);
+    canvas.height = Math.floor(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    build();
+  }
+
+  const FIXED = 1 / 120;
+  let acc = 0, last = performance.now();
+  function frame(now) {
+    let dt = (now - last) / 1000; last = now;
+    if (dt > 0.05) dt = 0.05;
+    acc += dt;
+    let guard = 0;
+    while (acc >= FIXED && guard < 8) { step(FIXED); acc -= FIXED; guard++; }
+    if (guard >= 8) acc = 0;
+    render();
+    requestAnimationFrame(frame);
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

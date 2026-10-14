@@ -1,0 +1,217 @@
+<!-- Concept: Vaporwave Sunset Boulevard -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vaporwave</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Monoton&family=Orbitron:wght@500;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  html,body{ width:100%; height:100%; overflow:hidden; background:#1a0b2e; }
+
+  .sky{
+    position:fixed; inset:0; z-index:0;
+    background:linear-gradient(180deg,#2b0f54 0%, #6a1b7a 32%, #d63d8a 52%, #ff8a5c 66%, #ffd06b 74%, #1a0b2e 74.1%);
+  }
+
+  /* sun with banded stripes */
+  .sun{
+    position:absolute; left:50%; top:52%; transform:translate(-50%,-50%); z-index:2;
+    width:min(52vw, 560px); aspect-ratio:1; border-radius:50%;
+    background:linear-gradient(180deg,#fff3b0 0%, #ffd34d 30%, #ff7ac0 62%, #a03bff 100%);
+    filter:drop-shadow(0 0 60px rgba(255,120,190,.7)) drop-shadow(0 0 140px rgba(160,60,255,.5));
+    overflow:hidden;
+    animation:sunpulse 6s ease-in-out infinite;
+  }
+  @keyframes sunpulse{ 0%,100%{ filter:drop-shadow(0 0 60px rgba(255,120,190,.65)) drop-shadow(0 0 140px rgba(160,60,255,.45)); } 50%{ filter:drop-shadow(0 0 80px rgba(255,140,200,.85)) drop-shadow(0 0 170px rgba(180,80,255,.6)); } }
+  .sun::after{
+    content:''; position:absolute; inset:0;
+    background:repeating-linear-gradient(180deg,
+      rgba(26,11,46,0) 0 12px, rgba(26,11,46,1) 12px 20px, rgba(26,11,46,0) 20px 34px, rgba(26,11,46,1) 34px 44px);
+    -webkit-mask-image:linear-gradient(180deg, transparent 0%, transparent 30%, #000 62%, #000 100%);
+            mask-image:linear-gradient(180deg, transparent 0%, transparent 30%, #000 62%, #000 100%);
+    animation:bandshift 3s linear infinite;
+  }
+  @keyframes bandshift{ 0%{ background-position-y:0; } 100%{ background-position-y:44px; } }
+
+  /* horizon glow */
+  .horizon{
+    position:absolute; left:0; right:0; top:72%; height:6%; z-index:3;
+    background:linear-gradient(180deg, rgba(255,150,210,0), rgba(255,120,200,.6), rgba(255,150,210,0));
+    filter:blur(6px);
+  }
+
+  /* perspective grid floor */
+  .floor{
+    position:absolute; left:-25%; right:-25%; top:74%; bottom:-10%; z-index:4;
+    background-color:#1a0b2e;
+    background-image:
+      linear-gradient(rgba(255,80,200,.85) 2px, transparent 2px),
+      linear-gradient(90deg, rgba(90,220,255,.85) 2px, transparent 2px);
+    background-size:80px 60px, 80px 60px;
+    transform:perspective(320px) rotateX(66deg);
+    transform-origin:top center;
+    animation:scroll 2.6s linear infinite;
+    box-shadow:inset 0 60px 120px rgba(255,80,200,.25);
+  }
+  @keyframes scroll{ 0%{ background-position:0 0, 0 0; } 100%{ background-position:0 60px, 0 0; } }
+
+  /* bust silhouette (inline SVG) — sits in front of the sun */
+  .bust{
+    position:absolute; left:50%; top:54%; transform:translate(-50%,-56%); z-index:5;
+    width:min(34vw, 360px);
+    filter:drop-shadow(0 0 34px rgba(255,90,200,.75)) drop-shadow(0 0 90px rgba(160,60,255,.45));
+  }
+
+  /* palm trees */
+  .palm{ position:absolute; bottom:22%; z-index:6; filter:drop-shadow(0 0 18px rgba(255,80,200,.6)); }
+  .palm.l{ left:5%; width:min(18vw,190px); }
+  .palm.r{ right:5%; width:min(18vw,190px); transform:scaleX(-1); }
+
+  /* chrome type */
+  .title{
+    position:absolute; left:50%; top:12%; transform:translateX(-50%); z-index:7;
+    font-family:'Monoton', cursive;
+    font-size:clamp(30px, 6.5vw, 96px);
+    letter-spacing:.06em; white-space:nowrap;
+    color:#ffd6f5;
+    background:linear-gradient(180deg,#ffffff 0%,#bfe9ff 24%,#5aa9ff 40%,#ffffff 50%,#ff9ee0 58%,#a03bff 82%,#3a1b66 100%);
+    -webkit-background-clip:text; background-clip:text;
+    -webkit-text-fill-color:transparent;
+    filter:drop-shadow(0 4px 0 rgba(80,20,120,.6)) drop-shadow(0 0 24px rgba(180,120,255,.6));
+    animation:hue 12s linear infinite;
+  }
+  @keyframes hue{ 0%{ filter:drop-shadow(0 4px 0 rgba(80,20,120,.6)) hue-rotate(0deg);} 100%{ filter:drop-shadow(0 4px 0 rgba(80,20,120,.6)) hue-rotate(360deg);} }
+  .sub{
+    position:absolute; left:50%; top:29%; transform:translateX(-50%); z-index:7;
+    font-family:'Orbitron', sans-serif; font-weight:500;
+    font-size:clamp(9px, 1.4vw, 16px); letter-spacing:.7em; text-transform:uppercase;
+    color:#9be8ff; text-shadow:0 0 12px rgba(120,220,255,.8);
+    white-space:nowrap;
+  }
+
+  /* retro scanlines overlay */
+  .lines{
+    position:fixed; inset:0; z-index:8; pointer-events:none; opacity:.35;
+    background:repeating-linear-gradient(180deg, rgba(0,0,0,0) 0 3px, rgba(0,0,0,.35) 3px 4px);
+    mix-blend-mode:multiply;
+  }
+
+  .badge{
+    position:fixed; left:14px; bottom:12px; z-index:20;
+    font-family:'Share Tech Mono', monospace; font-size:11px; letter-spacing:.12em;
+    color:rgba(255,180,235,.72); text-transform:uppercase;
+    background:rgba(40,8,60,.4); border:1px solid rgba(255,140,220,.3);
+    padding:6px 10px; border-radius:4px; backdrop-filter:blur(3px); user-select:none;
+  }
+  .badge a{ color:rgba(255,200,245,.95); text-decoration:none; }
+  .badge a:hover{ text-shadow:0 0 8px rgba(255,150,230,.9); }
+
+  .star{ position:fixed; width:2px; height:2px; background:#fff; border-radius:50%; z-index:1; animation:tw 3s infinite; }
+  @keyframes tw{ 0%,100%{opacity:.2;} 50%{opacity:1;} }
+</style>
+</head>
+<body>
+<div class="sky"></div>
+
+<!-- shared gradients -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="bustG" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a0f57"/>
+      <stop offset="0.55" stop-color="#20082f"/>
+      <stop offset="1" stop-color="#0d0318"/>
+    </linearGradient>
+    <linearGradient id="neonG" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff8fd8"/>
+      <stop offset="1" stop-color="#7a2bd6"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<div class="sun"></div>
+<div class="horizon"></div>
+<div class="floor"></div>
+
+<svg class="bust" viewBox="0 0 300 360" aria-hidden="true">
+  <path fill="url(#bustG)" d="M150 24
+    c-34 0 -60 26 -60 60 c0 18 8 34 20 45 c-6 8 -10 18 -10 28
+    c-30 8 -60 24 -76 46 c-10 14 -14 32 -14 52 l0 46 l280 0 l0 -46
+    c0 -20 -4 -38 -14 -52 c-16 -22 -46 -38 -76 -46 c0 -10 -4 -20 -10 -28
+    c12 -11 20 -27 20 -45 c0 -34 -26 -60 -60 -60 z"/>
+  <!-- rim light along the left edge -->
+  <path fill="none" stroke="rgba(255,140,220,.85)" stroke-width="2.5" d="M150 24
+    c-34 0 -60 26 -60 60 c0 18 8 34 20 45 c-6 8 -10 18 -10 28
+    c-30 8 -60 24 -76 46 c-10 14 -14 32 -14 52"/>
+  <path fill="none" stroke="rgba(120,220,255,.6)" stroke-width="1.6" d="M96 129 c-6 8 -10 18 -10 28"/>
+</svg>
+
+<svg class="palm l" viewBox="0 0 200 260" aria-hidden="true">
+  <g fill="none" stroke="url(#neonG)" stroke-width="7" stroke-linecap="round">
+    <path d="M100 260 C100 190 96 150 100 110"/>
+    <path d="M100 112 C70 92 40 96 18 116"/>
+    <path d="M100 112 C130 92 160 96 182 116"/>
+    <path d="M100 108 C80 80 50 72 24 82"/>
+    <path d="M100 108 C120 80 150 72 176 82"/>
+    <path d="M100 104 C94 74 100 50 112 30"/>
+    <path d="M100 104 C82 78 70 62 58 44"/>
+  </g>
+</svg>
+<svg class="palm r" viewBox="0 0 200 260" aria-hidden="true">
+  <g fill="none" stroke="url(#neonG)" stroke-width="7" stroke-linecap="round">
+    <path d="M100 260 C100 190 96 150 100 110"/>
+    <path d="M100 112 C70 92 40 96 18 116"/>
+    <path d="M100 112 C130 92 160 96 182 116"/>
+    <path d="M100 108 C80 80 50 72 24 82"/>
+    <path d="M100 108 C120 80 150 72 176 82"/>
+    <path d="M100 104 C94 74 100 50 112 30"/>
+    <path d="M100 104 C82 78 70 62 58 44"/>
+  </g>
+</svg>
+
+<div class="title">SUNSET&nbsp;BOULEVARD</div>
+<div class="sub">endless summer &#9679; 1984</div>
+<div class="lines"></div>
+<div class="badge">Vaporwave &nbsp;<a href="index.html">&larr; Gallery</a></div>
+<script>
+(function(){
+  // twinkling stars in the upper sky
+  for(let i=0;i<70;i++){
+    const s = document.createElement('div');
+    s.className='star';
+    s.style.left = (Math.random()*100)+'vw';
+    s.style.top = (Math.random()*36)+'vh';
+    s.style.animationDelay = (Math.random()*3)+'s';
+    const sz = Math.random()<0.25 ? 3 : 2;
+    s.style.width = sz+'px'; s.style.height = sz+'px';
+    s.style.opacity = 0.2 + Math.random()*0.8;
+    document.body.appendChild(s);
+  }
+  // parallax on pointer move
+  const sun = document.querySelector('.sun');
+  const floor = document.querySelector('.floor');
+  const bust = document.querySelector('.bust');
+  const palmL = document.querySelector('.palm.l');
+  const palmR = document.querySelector('.palm.r');
+  let tx=0, ty=0, cx=0, cy=0;
+  window.addEventListener('mousemove', e=>{
+    tx = (e.clientX/window.innerWidth - .5);
+    ty = (e.clientY/window.innerHeight - .5);
+  });
+  window.addEventListener('touchmove', e=>{ if(e.touches[0]){ tx=(e.touches[0].clientX/window.innerWidth-.5); ty=(e.touches[0].clientY/window.innerHeight-.5); } }, {passive:true});
+  (function anim(){
+    cx += (tx-cx)*0.06; cy += (ty-cy)*0.06;
+    sun.style.transform = `translate(calc(-50% + ${cx*26}px), calc(-50% + ${cy*14}px))`;
+    bust.style.transform = `translate(calc(-50% + ${cx*14}px), calc(-56% + ${cy*8}px))`;
+    floor.style.backgroundPosition = `${cx*20}px 0, ${cx*10}px 0`;
+    palmL.style.transform = `translateX(${cx*-30}px)`;
+    palmR.style.transform = `scaleX(-1) translateX(${cx*-30}px)`;
+    requestAnimationFrame(anim);
+  })();
+})();
+</script>
+</body>
+</html>

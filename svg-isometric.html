@@ -1,0 +1,244 @@
+<!-- svg-isometric — Animated Isometric Dusk City -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Isometric City</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;800&family=IBM+Plex+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;background:#070a1c;overflow:hidden}
+  body{font-family:'IBM Plex Mono',monospace}
+  #stage{position:fixed;inset:0;width:100vw;height:100vh;display:block}
+  .badge{position:fixed;left:18px;bottom:18px;z-index:10;display:inline-flex;gap:10px;align-items:baseline;
+    padding:7px 14px;border:1px solid rgba(255,200,140,.2);border-radius:999px;background:rgba(12,14,34,.55);
+    -webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);color:rgba(226,232,250,.72);
+    text-decoration:none;font-size:10px;letter-spacing:.16em;text-transform:uppercase;opacity:.72;
+    transition:opacity .4s,border-color .4s}
+  .badge:hover{opacity:1;border-color:rgba(255,200,140,.55)}
+  .badge .t{font-family:'Syne',sans-serif;font-weight:800;font-size:14px;letter-spacing:.02em;text-transform:none;color:rgba(240,244,255,.95)}
+  .badge .g{color:rgba(226,232,250,.45)}
+</style>
+</head>
+<body>
+<svg id="stage" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-label="Animated isometric city at dusk">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#060a1e"/>
+      <stop offset="46%" stop-color="#101a3c"/>
+      <stop offset="76%" stop-color="#2a2050"/>
+      <stop offset="100%" stop-color="#3a2450"/>
+    </linearGradient>
+    <radialGradient id="moon" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff6e0"/>
+      <stop offset="45%" stop-color="#ffd9a0"/>
+      <stop offset="100%" stop-color="#ffd9a0" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="spot" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffca7a" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#ffca7a" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="cloudblur" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="16"/>
+    </filter>
+    <radialGradient id="vig" cx="50%" cy="52%" r="72%">
+      <stop offset="50%" stop-color="#000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000" stop-opacity="0.6"/>
+    </radialGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#sky)"/>
+  <g id="stars"></g>
+  <circle cx="1268" cy="196" r="96" fill="url(#moon)" opacity="0.9"/>
+  <circle cx="1268" cy="196" r="34" fill="#fff3dd" opacity="0.95"/>
+  <g id="clouds" filter="url(#cloudblur)" opacity="0.5"></g>
+  <ellipse id="spot" cx="800" cy="470" rx="560" ry="330" fill="url(#spot)"/>
+  <g id="scene"></g>
+  <rect width="1600" height="900" fill="url(#vig)"/>
+  <text x="1520" y="96" text-anchor="end" fill="rgba(226,232,250,.55)" font-family="'Syne',sans-serif" font-weight="600" font-size="26">DUSK DISTRICT</text>
+  <text x="1520" y="122" text-anchor="end" fill="rgba(255,200,140,.45)" font-family="'IBM Plex Mono',monospace" font-size="12" letter-spacing="3">ISOMETRIC &#183; 2:1</text>
+</svg>
+<a class="badge" href="index.html"><span class="t">Isometric</span><span class="g">&larr; Gallery</span></a>
+<script>
+(function(){
+  var NS="http://www.w3.org/2000/svg";
+  var svg=document.getElementById("stage"), scene=document.getElementById("scene");
+  var CX=800, CY=430, TW=104, TH=52, ZH=34, G=4;
+  function iso(gx,gy,z){ return {x:CX+(gx-gy)*TW/2, y:CY+(gx+gy)*TH/2 - z*ZH}; }
+  function P(a){ return a.map(function(p){return p.x.toFixed(1)+","+p.y.toFixed(1);}).join(" "); }
+  function mkPoly(parent,fill,op){
+    var el=document.createElementNS(NS,"polygon");
+    el.setAttribute("fill",fill);
+    if(op!=null) el.setAttribute("opacity",op);
+    el.setAttribute("stroke","#000"); el.setAttribute("stroke-width","0.5"); el.setAttribute("stroke-opacity","0.25");
+    parent.appendChild(el); return el;
+  }
+  function rnd(i){ var x=Math.sin(i*127.1+311.7)*43758.5453; return x-Math.floor(x); }
+
+  // ---- stars ----
+  var stars=document.getElementById("stars");
+  for(var s=0;s<120;s++){
+    var c=document.createElementNS(NS,"circle");
+    c.setAttribute("cx",(rnd(s*3.1)*1600).toFixed(0)); c.setAttribute("cy",(rnd(s*7.7)*380).toFixed(0));
+    c.setAttribute("r",(0.6+rnd(s*2.3)*1.5).toFixed(1));
+    c.setAttribute("fill","#dce6ff"); c.setAttribute("opacity",(0.25+rnd(s*5.5)*0.6).toFixed(2));
+    stars.appendChild(c);
+  }
+  // ---- clouds ----
+  var clouds=document.getElementById("clouds"), cloudEls=[];
+  for(var c2=0;c2<6;c2++){
+    var e=document.createElementNS(NS,"ellipse");
+    e.setAttribute("cx",(rnd(c2*9.1)*1700-50).toFixed(0));
+    e.setAttribute("cy",(60+rnd(c2*4.4)*230).toFixed(0));
+    e.setAttribute("rx",(120+rnd(c2*6.6)*160).toFixed(0));
+    e.setAttribute("ry",(26+rnd(c2*3.3)*20).toFixed(0));
+    e.setAttribute("fill", c2%2?"#3a2a5e":"#2a2150");
+    clouds.appendChild(e); cloudEls.push(e);
+  }
+
+  // ---- ground tiles ----
+  var ground=document.createElementNS(NS,"g"); scene.appendChild(ground);
+  for(var gx=-G;gx<=G;gx++){
+    for(var gy=-G;gy<=G;gy++){
+      var isRoad=(gx===0||gy===0);
+      var n=iso(gx-0.5,gy-0.5,0), e=iso(gx+0.5,gy-0.5,0), s=iso(gx+0.5,gy+0.5,0), w=iso(gx-0.5,gy+0.5,0);
+      var pl=mkPoly(ground, isRoad ? "#1a2038" : ((gx+gy)%2===0?"#111733":"#0e1429"), isRoad?1:0.95);
+      pl.setAttribute("points", P([n,e,s,w]));
+      if(isRoad){
+        pl.setAttribute("stroke","#2b3358"); pl.setAttribute("stroke-opacity","0.5"); pl.setAttribute("stroke-width","1");
+      } else { pl.setAttribute("stroke-opacity","0.12"); }
+    }
+  }
+
+  // ---- buildings ----
+  var pals=[
+    {top:"#3a4373",right:"#262d54",left:"#1a1f3d",win:"#ffcf82"},
+    {top:"#2f5f7a",right:"#1f4056",left:"#152d3d",win:"#bfe9ff"},
+    {top:"#4a3a63",right:"#31264a",left:"#211a33",win:"#ffd0e0"},
+    {top:"#2f6b63",right:"#1e4a46",left:"#14322f",win:"#7fe6d0"},
+    {top:"#5a4a3a",right:"#3d3226",left:"#282018",win:"#ffd9a0"}
+  ];
+  var list=[];
+  for(var gx=-G;gx<=G;gx++){
+    for(var gy=-G;gy<=G;gy++){
+      if(gx===0||gy===0) continue;
+      var key=(gx+5)*17+(gy+5)*7;
+      if(rnd(key)<0.16) continue;
+      var h=1+Math.floor(rnd(key*1.7)*4) + Math.max(0, 3-Math.abs(gx)-Math.abs(gy));
+      if(h>8)h=8;
+      list.push({gx:gx,gy:gy,h:h,pal:pals[Math.floor(rnd(key*2.9)*pals.length)]});
+    }
+  }
+  list.sort(function(a,b){ return (a.gx+a.gy)-(b.gx+b.gy); });
+  var winEls=[];
+  var buildingsG=document.createElementNS(NS,"g"); scene.appendChild(buildingsG);
+  list.forEach(function(b){
+    var g=document.createElementNS(NS,"g"); buildingsG.appendChild(g);
+    var w=0.82,d=0.82,gx=b.gx,gy=b.gy,h=b.h,pal=b.pal;
+    var x0=gx-w/2,y0=gy-d/2,x1=gx+w/2,y1=gy+d/2;
+    var n=iso(x0,y0,0),e=iso(x1,y0,0),s=iso(x1,y1,0),ww=iso(x0,y1,0);
+    var nt=iso(x0,y0,h),et=iso(x1,y0,h),st=iso(x1,y1,h),wt=iso(x0,y1,h);
+    mkPoly(g,pal.left).setAttribute("points",P([ww,s,st,wt]));
+    mkPoly(g,pal.right).setAttribute("points",P([e,s,st,et]));
+    mkPoly(g,pal.top).setAttribute("points",P([nt,et,st,wt]));
+    // windows on right face (x=x1, y varies y0..y1) and left face (y=y1, x varies x0..x1)
+    var rows=Math.max(2,h), cols=3;
+    function winGrid(fixedX, fixedY, from, to, isRight){
+      for(var r=0;r<rows;r++){
+        for(var cI=0;cI<cols;cI++){
+          var u0=0.14+cI*(0.72/cols), u1=u0+(0.72/cols)*0.6;
+          var v0=0.14+r*(0.74/rows), v1=v0+(0.74/rows)*0.52;
+          var a,b2,c3,d3;
+          if(isRight){
+            a=iso(fixedX, from+(to-from)*u0, v0*h); b2=iso(fixedX, from+(to-from)*u1, v0*h);
+            c3=iso(fixedX, from+(to-from)*u1, v1*h); d3=iso(fixedX, from+(to-from)*u0, v1*h);
+          } else {
+            a=iso(from+(to-from)*u0, fixedY, v0*h); b2=iso(from+(to-from)*u1, fixedY, v0*h);
+            c3=iso(from+(to-from)*u1, fixedY, v1*h); d3=iso(from+(to-from)*u0, fixedY, v1*h);
+          }
+          var wp=mkPoly(g, pal.win, 0.9);
+          wp.setAttribute("points",P([a,b2,c3,d3]));
+          wp.setAttribute("stroke-opacity","0");
+          wp.setAttribute("fill-opacity", (isRight?0.92:0.6).toFixed(2));
+          wp._base=(isRight?0.92:0.6);
+          winEls.push(wp);
+        }
+      }
+    }
+    winGrid(x1,0,y0,y1,true);
+    winGrid(0,y1,x0,x1,false);
+  });
+
+  // ---- cars ----
+  function carBox(parent){
+    var g=document.createElementNS(NS,"g"); parent.appendChild(g);
+    return {g:g,L:mkPoly(g,"#111"),R:mkPoly(g,"#111"),T:mkPoly(g,"#222")};
+  }
+  function setCar(cb,gx,gy,w,d,h,pal){
+    var x0=gx-w/2,y0=gy-d/2,x1=gx+w/2,y1=gy+d/2;
+    var n=iso(x0,y0,0),e=iso(x1,y0,0),s=iso(x1,y1,0),ww=iso(x0,y1,0);
+    var nt=iso(x0,y0,h),et=iso(x1,y0,h),st=iso(x1,y1,h),wt=iso(x0,y1,h);
+    cb.L.setAttribute("points",P([ww,s,st,wt])); cb.L.setAttribute("fill",pal.left);
+    cb.R.setAttribute("points",P([e,s,st,et])); cb.R.setAttribute("fill",pal.right);
+    cb.T.setAttribute("points",P([nt,et,st,wt])); cb.T.setAttribute("fill",pal.top);
+    cb.T.setAttribute("fill-opacity","0.95");
+    cb.L.setAttribute("stroke-opacity","0"); cb.R.setAttribute("stroke-opacity","0"); cb.T.setAttribute("stroke-opacity","0");
+  }
+  var carsG=document.createElementNS(NS,"g"); scene.appendChild(carsG);
+  var carPal1={top:"#ffd9a0",right:"#c98a3a",left:"#8a5a1e"};
+  var carPal2={top:"#9fe6d8",right:"#3a8a7e",left:"#1f5a52"};
+  var carPal3={top:"#f2a0c0",right:"#a84a72",left:"#6e2e4a"};
+  var cars=[
+    {cb:carBox(carsG),axis:"x",p:-5.4,spd:1.5,dir:1,pal:carPal1},
+    {cb:carBox(carsG),axis:"x",p:3.2,spd:1.1,dir:-1,pal:carPal2},
+    {cb:carBox(carsG),axis:"y",p:5.2,spd:1.3,dir:-1,pal:carPal3},
+    {cb:carBox(carsG),axis:"y",p:-2.6,spd:1.7,dir:1,pal:carPal1}
+  ];
+
+  var mx=0,my=0,tx=0,ty=0;
+  window.addEventListener("pointermove",function(e){
+    var r=svg.getBoundingClientRect();
+    tx=((e.clientX-r.left)/r.width-0.5)*2; ty=((e.clientY-r.top)/r.height-0.5)*2;
+  },{passive:true});
+  var spot=document.getElementById("spot");
+  var last=performance.now(), flickT=0;
+  function frame(now){
+    var dt=Math.min(0.05,(now-last)/1000); last=now;
+    var t=now/1000;
+    mx+=(tx-mx)*0.05; my+=(ty-my)*0.05;
+    // clouds drift
+    for(var i=0;i<cloudEls.length;i++){
+      var e=cloudEls[i], cx=parseFloat(e.getAttribute("cx")) + (0.25+i*0.06);
+      if(cx>1700) cx=-100;
+      e.setAttribute("cx",cx.toFixed(1));
+    }
+    // cars
+    for(var i=0;i<cars.length;i++){
+      var car=cars[i];
+      car.p += car.spd*car.dir*dt;
+      if(car.p>6.2){car.p=-6.2;} if(car.p<-6.2){car.p=6.2;}
+      if(car.axis==="x") setCar(car.cb, car.p, 0, 0.55,0.55,0.42, car.pal);
+      else setCar(car.cb, 0, car.p, 0.55,0.55,0.42, car.pal);
+    }
+    // window flicker
+    flickT+=dt;
+    if(flickT>0.9){
+      flickT=0;
+      for(var k=0;k<10;k++){
+        var el=winEls[Math.floor(Math.random()*winEls.length)];
+        if(el){ var on=Math.random()>0.35; el.setAttribute("fill-opacity", (on? el._base : el._base*0.18).toFixed(2)); }
+      }
+    }
+    // bob + parallax
+    var bob=Math.sin(t*0.6)*3.5;
+    scene.setAttribute("transform","translate("+(mx*14).toFixed(2)+","+(bob+my*10+18).toFixed(2)+") translate(800,450) scale(1.17) translate(-800,-450)");
+    spot.setAttribute("cx",(800+mx*260).toFixed(1)); spot.setAttribute("cy",(470+my*150).toFixed(1));
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

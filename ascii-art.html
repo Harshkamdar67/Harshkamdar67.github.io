@@ -1,0 +1,169 @@
+<!-- Concept: ASCII Torus Renderer -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ASCII Art</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  html,body{ width:100%; height:100%; overflow:hidden; background:#020603; }
+  canvas{ display:block; width:100vw; height:100vh; }
+  .vig{ position:fixed; inset:0; z-index:6; pointer-events:none;
+    background:radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0) 44%, rgba(0,0,0,.72) 100%); }
+  .scan{ position:fixed; inset:0; z-index:6; pointer-events:none; opacity:.35;
+    background:repeating-linear-gradient(180deg, rgba(0,0,0,0) 0 2px, rgba(0,0,0,.4) 2px 3px); mix-blend-mode:multiply; }
+  .badge{ position:fixed; left:14px; bottom:12px; z-index:20;
+    font-family:'Share Tech Mono', monospace; font-size:11px; letter-spacing:.12em;
+    color:rgba(140,255,180,.6); text-transform:uppercase;
+    background:rgba(2,14,8,.5); border:1px solid rgba(120,255,170,.22);
+    padding:6px 10px; border-radius:4px; backdrop-filter:blur(3px); user-select:none; }
+  .badge a{ color:rgba(170,255,205,.95); text-decoration:none; }
+  .badge a:hover{ text-shadow:0 0 8px rgba(120,255,170,.9); }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="scan"></div>
+<div class="vig"></div>
+<div class="badge">ASCII Art &nbsp;<a href="index.html">&larr; Gallery</a></div>
+<script>
+(function(){
+  const cv = document.getElementById('c');
+  const ctx = cv.getContext('2d');
+  let W,H,dpr, cellW, cellH, cols, rows, fontPx;
+
+  const RAMP = " .,:;irsXA253hMHGS#9B&@";
+  // donut params
+  const R1 = 1, R2 = 2, K2 = 5;
+
+  function size(){
+    dpr = Math.min(window.devicePixelRatio||1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    cv.width = Math.floor(W*dpr); cv.height = Math.floor(H*dpr);
+    cv.style.width=W+'px'; cv.style.height=H+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+
+    fontPx = Math.max(9, Math.min(20, Math.round(Math.min(W,H)/58)));
+    cellW = fontPx*0.60;
+    cellH = fontPx*1.05;
+    cols = Math.floor(W/cellW);
+    rows = Math.floor(H/cellH);
+    ctx.font = fontPx+'px "Share Tech Mono", monospace';
+    ctx.textBaseline = 'top';
+  }
+  size(); window.addEventListener('resize', size);
+
+  const zbuf = new Float32Array(1);
+  let A = 0, B = 0;
+  let spin = 1, twist = 1;
+
+  // pointer influence: drag to change rotation speed; move to tilt
+  let mx = 0.5, my = 0.5;
+  window.addEventListener('mousemove', e=>{ mx = e.clientX/window.innerWidth; my = e.clientY/window.innerHeight; });
+  window.addEventListener('touchmove', e=>{ if(e.touches[0]){ mx=e.touches[0].clientX/window.innerWidth; my=e.touches[0].clientY/window.innerHeight; } }, {passive:true});
+  let dragging=false, lastX=0;
+  window.addEventListener('mousedown', e=>{ dragging=true; lastX=e.clientX; });
+  window.addEventListener('mouseup', ()=>{ dragging=false; });
+  window.addEventListener('mousemove', e=>{ if(dragging){ spin += (e.clientX-lastX)*0.01; lastX=e.clientX; } });
+
+  // screen-space grid buffers
+  let lum = null, zz = null;
+
+  function draw(now){
+    ctx.fillStyle = '#020603';
+    ctx.fillRect(0,0,W,H);
+
+    // dynamic rotation from time + pointer
+    const t = now*0.001;
+    A += 0.012 * spin;
+    B += 0.008 * twist;
+    const tiltA = (my-0.5)*0.8;
+
+    const K1 = cols*0.52;
+    const yScale = cellW/cellH;
+    const ox = cols/2, oy = rows/2;
+
+    const n = cols*rows;
+    if(!lum || lum.length !== n){ lum = new Float32Array(n); zz = new Float32Array(n); }
+
+    // clear
+    lum.fill(0); zz.fill(0);
+
+    const cosA=Math.cos(A+tiltA), sinA=Math.sin(A+tiltA);
+    const cosB=Math.cos(B), sinB=Math.sin(B);
+
+    const tStep = 0.16, pStep = 0.06;
+    for(let theta=0; theta<Math.PI*2; theta+=tStep){
+      const ct=Math.cos(theta), st=Math.sin(theta);
+      // circle in x-y
+      const cx3 = R2 + R1*ct;
+      const cy3 = R1*st;
+      for(let phi=0; phi<Math.PI*2; phi+=pStep){
+        const cp=Math.cos(phi), sp=Math.sin(phi);
+        // 3D torus point
+        const x = cx3*cp;
+        const y = cy3;
+        const z = cx3*sp;
+
+        // rotate around X (A) then Z (B)
+        const y1 = y*cosA - z*sinA;
+        const z1 = y*sinA + z*cosA;
+        const x2 = x*cosB - y1*sinB;
+        const y2 = x*sinB + y1*cosB;
+
+        const zz2 = z1 + K2; // camera distance
+        const ooz = 1/zz2;
+        const xp = Math.floor(ox + K1*ooz*x2);
+        const yp = Math.floor(oy - K1*ooz*y2*yScale);
+
+        if(xp<0||xp>=cols||yp<0||yp>=rows) continue;
+
+        // shading from the surface normal against a fixed light
+        const nx = cx3*cp, ny = R1*st, nz = cx3*sp;
+        const nlen = Math.sqrt(nx*nx+ny*ny+nz*nz)||1;
+        const lx = 0.6, ly=-0.6, lz=0.5;
+        let lumv = (nx*lx + ny*ly + nz*lz)/nlen;
+        lumv = Math.max(0, lumv);
+
+        const idx = yp*cols + xp;
+        if(ooz > zz[idx]){
+          zz[idx] = ooz;
+          lum[idx] = lumv;
+        }
+      }
+    }
+
+    // render characters
+    for(let y=0;y<rows;y++){
+      for(let x=0;x<cols;x++){
+        const idx=y*cols+x;
+        if(zz[idx]<=0) continue;
+        const l = lum[idx];
+        const ci = Math.min(RAMP.length-1, Math.floor(l*RAMP.length));
+        const ch = RAMP[ci];
+        if(ch === ' ') continue;
+        const shade = Math.floor(70 + l*180);
+        ctx.fillStyle = 'rgb('+Math.floor(shade*0.35)+','+shade+','+Math.floor(shade*0.6)+')';
+        ctx.fillText(ch, x*cellW, y*cellH);
+      }
+    }
+
+    // HUD caption
+    ctx.font = fontPx+'px "Share Tech Mono", monospace';
+    ctx.fillStyle = 'rgba(120,255,170,0.55)';
+    ctx.textAlign = 'right';
+    ctx.fillText('render: torus('+R1+','+R2+')  chars:'+RAMP.length+'  grid:'+cols+'x'+rows, W-16, H-fontPx*2.2);
+    ctx.fillText('drag to spin  \u2192', W-16, H-fontPx*1.1);
+    ctx.textAlign = 'left';
+
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>

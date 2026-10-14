@@ -1,0 +1,117 @@
+<!-- CONCEPT: Infinite Tessellation — a panning grid of nested rotating polygons driven by a travelling phase field -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Infinite Tessellation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;700&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;background:#0b0614}
+  canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh}
+  #badge{position:fixed;left:16px;bottom:14px;z-index:10;font-family:'Space Mono',monospace;
+    font-size:10px;letter-spacing:.14em;color:rgba(220,170,255,.55);text-transform:uppercase;
+    display:flex;gap:10px;align-items:center}
+  #badge a{color:rgba(220,170,255,.55);text-decoration:none;border-bottom:1px solid rgba(220,170,255,.22)}
+  #badge a:hover{color:#e5a6ff}
+  #badge .dot{width:4px;height:4px;border-radius:50%;background:#c25cff;box-shadow:0 0 8px #c25cff}
+  #cap{position:fixed;right:20px;top:20px;text-align:right;font-family:'Inter',sans-serif;
+    font-weight:700;font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:rgba(220,170,255,.7)}
+  #cap span{display:block;font-family:'Space Mono',monospace;font-weight:400;font-size:9px;
+    letter-spacing:.16em;color:rgba(200,160,240,.4);margin-top:6px}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="cap">Tessellation<span>nested polygons · phase field</span></div>
+<div id="badge"><span class="dot"></span><span>Infinite Tessellation</span><span>&middot;</span><a href="index.html">&larr; Gallery</a></div>
+<script>
+(()=>{
+  const cvs=document.getElementById('c'),ctx=cvs.getContext('2d');
+  let W,H,DPR;
+  let S=120;                  // cell size
+  const mouse={x:0.5,y:0.5,tx:0.5,ty:0.5};
+
+  function resize(){
+    DPR=Math.min(devicePixelRatio||1,2);
+    W=innerWidth;H=innerHeight;
+    cvs.width=Math.floor(W*DPR);cvs.height=Math.floor(H*DPR);
+    cvs.style.width=W+'px';cvs.style.height=H+'px';
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    S=Math.max(72,Math.min(150,Math.min(W,H)/8));
+  }
+
+  const TAU=Math.PI*2;
+  let t=0;
+
+  function poly(cx,cy,r,n,rot,fill){
+    ctx.beginPath();
+    for(let i=0;i<n;i++){
+      const a=rot+i/n*TAU;
+      const x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r;
+      i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+    }
+    ctx.closePath(); ctx.fillStyle=fill; ctx.fill();
+  }
+
+  function draw(){
+    // soft dark backdrop with faint gradient shift
+    const bg=ctx.createLinearGradient(0,0,W,H);
+    bg.addColorStop(0,'#0b0614');bg.addColorStop(1,'#120a1e');
+    ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+    ctx.globalCompositeOperation='lighter';
+
+    const panX=(t*14)%S, panY=(t*9)%S;
+    const cols=Math.ceil(W/S)+2, rows=Math.ceil(H/S)+2;
+    const mx=mouse.x*W, my=mouse.y*H;
+
+    for(let r=-1;r<rows;r++){
+      for(let c=-1;c<cols;c++){
+        const cx=c*S-panX+S/2, cy=r*S-panY+S/2;
+        // phase field — travelling waves plus cursor influence
+        const dist=Math.hypot(cx-mx,cy-my);
+        const field=Math.sin(cx*0.012+t*0.9)+Math.cos(cy*0.014-t*0.7)
+                    + Math.sin(dist*0.02 - t*1.6)*1.4;
+        const phase=(field+3)/6;               // 0..1
+        const rot=t*0.6 + field*1.4;
+        const maxR=S*0.5;
+        const rings=4;
+        const hueBase=( (cx*0.15 + cy*0.1 + t*30) % 360 + 360)%360;
+        for(let k=0;k<rings;k++){
+          const rr=maxR*(1 - k/rings)* (0.82+phase*0.28);
+          const sides=3 + ((k + Math.floor(phase*4))%6);
+          const hue=(hueBase + k*26 + phase*60)%360;
+          const light=46 + phase*26 - k*3;
+          poly(cx,cy,rr,sides, rot*(k%2? -1:1) + k*0.5,
+               `hsla(${hue},88%,${light}%,${0.14 - k*0.02 + phase*0.10})`);
+        }
+        // bright core
+        const cr=maxR*0.16*(0.6+phase);
+        poly(cx,cy,cr,6,rot*1.7,`hsla(${(hueBase+40)%360},100%,72%,${0.5*phase+0.15})`);
+      }
+    }
+    ctx.globalCompositeOperation='source-over';
+
+    // gentle vignette
+    const g=ctx.createRadialGradient(W/2,H/2,H*0.2,W/2,H/2,H*0.9);
+    g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(6,2,12,0.55)');
+    ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  }
+
+  function loop(){
+    t+=0.011;
+    mouse.x+=(mouse.tx-mouse.x)*0.05;
+    mouse.y+=(mouse.ty-mouse.y)*0.05;
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  window.addEventListener('pointermove',e=>{mouse.tx=e.clientX/W;mouse.ty=e.clientY/H;});
+  addEventListener('resize',resize);
+  resize();requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

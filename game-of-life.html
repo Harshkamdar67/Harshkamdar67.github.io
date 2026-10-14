@@ -1,0 +1,116 @@
+<!-- Game of Life — Conway's automaton on a dark grid, rendered with glowing decay trails -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Game of Life</title>
+<style>
+:root{color-scheme:dark}
+html,body{margin:0;height:100%;background:#03050b;overflow:hidden}
+canvas{display:block;width:100vw;height:100vh}
+.badge{position:fixed;left:14px;bottom:14px;z-index:9;font:12px/1.35 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  color:rgba(255,255,255,.5);background:rgba(8,12,22,.35);border:1px solid rgba(255,255,255,.1);
+  padding:6px 11px;border-radius:999px;backdrop-filter:blur(8px);letter-spacing:.03em}
+.badge a{color:rgba(160,220,255,.9);text-decoration:none}
+.badge a:hover{color:#fff}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="badge">Game of Life &middot; <a href="index.html">&larr; Gallery</a></div>
+<script>
+(()=>{
+const c=document.getElementById('c');
+const ctx=c.getContext('2d',{alpha:false});
+let W=0,H=0,DPR=1;
+const CELL=8;
+
+let GW=0,GH=0;
+let cur,nxt,heat,img,off,offctx;
+let gen=0,acc=0;
+const SPEED=6; // frames per generation
+
+function seed(){
+  cur.fill(0);
+  for(let i=0;i<GW*GH;i++)cur[i]=Math.random()<0.28?1:0;
+}
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1,2);
+  W=window.innerWidth;H=window.innerHeight;
+  c.width=Math.floor(W*DPR);c.height=Math.floor(H*DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.fillStyle='#03050b';ctx.fillRect(0,0,W,H);
+  GW=Math.floor(W/CELL);GH=Math.floor(H/CELL);
+  const n=GW*GH;
+  cur=new Uint8Array(n);nxt=new Uint8Array(n);heat=new Float32Array(n);
+  off=document.createElement('canvas');off.width=GW;off.height=GH;
+  offctx=off.getContext('2d');
+  img=offctx.createImageData(GW,GH);
+  seed();
+}
+addEventListener('resize',resize);resize();
+
+const mouse={x:-1,y:-1,down:false};
+addEventListener('pointermove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;});
+addEventListener('pointerdown',e=>{mouse.down=true;mouse.x=e.clientX;mouse.y=e.clientY;});
+addEventListener('pointerup',()=>mouse.down=false);
+addEventListener('pointerleave',()=>{mouse.down=false;mouse.x=-1;});
+
+function step(){
+  for(let y=0;y<GH;y++){
+    const r=y*GW;
+    const up=((y-1+GH)%GH)*GW,dn=((y+1)%GH)*GW;
+    for(let x=0;x<GW;x++){
+      const xm=(x-1+GW)%GW,xp=(x+1)%GW;
+      let n=cur[up+xm]+cur[up+x]+cur[up+xp]
+           +cur[r+xm]            +cur[r+xp]
+           +cur[dn+xm]+cur[dn+x]+cur[dn+xp];
+      const alive=cur[r+x];
+      nxt[r+x]=(alive?(n===2||n===3):(n===3))?1:0;
+    }
+  }
+  let a=cur;cur=nxt;nxt=a;
+  gen++;
+}
+
+function frame(){
+  if(mouse.down&&mouse.x>=0){
+    const gx=Math.floor(mouse.x/CELL),gy=Math.floor(mouse.y/CELL);
+    for(let y=-3;y<=3;y++)for(let x=-3;x<=3;x++){
+      if(x*x+y*y>9)continue;
+      const ix=(gx+x+GW)%GW,iy=(gy+y+GH)%GH;
+      cur[iy*GW+ix]=1;heat[iy*GW+ix]=1;
+    }
+  }
+  acc++;
+  if(acc>=SPEED){acc=0;step();}
+
+  const d=img.data;
+  for(let i=0,p=0;i<GW*GH;i++,p+=4){
+    let hv=heat[i];
+    if(cur[i]){hv=1;heat[i]=1;}
+    else{heat[i]=hv*0.90;}
+    const t=Math.pow(hv,1.4);
+    d[p]  = 3 + t*t*90;
+    d[p+1]= 10 + t*200;
+    d[p+2]= 26 + t*235;
+    d[p+3]=255;
+  }
+  offctx.putImageData(img,0,0);
+  ctx.imageSmoothingEnabled=true;
+  ctx.drawImage(off,0,0,GW*CELL,GH*CELL);
+  // faint grid lines
+  ctx.strokeStyle='rgba(90,150,220,0.05)';
+  ctx.lineWidth=1;
+  ctx.beginPath();
+  for(let x=0;x<=GW;x++){ctx.moveTo(x*CELL,0);ctx.lineTo(x*CELL,GH*CELL);}
+  for(let y=0;y<=GH;y++){ctx.moveTo(0,y*CELL);ctx.lineTo(GW*CELL,y*CELL);}
+  ctx.stroke();
+  requestAnimationFrame(frame);
+}
+frame();
+})();
+</script>
+</body>
+</html>

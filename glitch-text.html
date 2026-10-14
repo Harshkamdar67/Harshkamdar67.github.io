@@ -1,0 +1,179 @@
+<!-- Concept: RGB Split Glitch Typography -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GLITCH // SIGNAL LOST</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  html,body{ width:100%; height:100%; overflow:hidden; background:#050507; }
+  body{ font-family:'Archivo Black', sans-serif; }
+
+  .stage{
+    position:fixed; inset:0; display:grid; place-items:center;
+    background:
+      radial-gradient(ellipse at 50% 50%, #14141c 0%, #050507 70%);
+    filter:contrast(1.05) saturate(1.1);
+  }
+
+  .stack{ position:relative; text-align:center; transform:translateZ(0); }
+
+  .glitch{
+    position:relative;
+    font-size:clamp(48px, 13vw, 200px);
+    line-height:.95;
+    letter-spacing:-.02em;
+    color:#f2f2f7;
+    text-transform:uppercase;
+    white-space:nowrap;
+    text-shadow:0 0 24px rgba(120,180,255,.18);
+  }
+  .sub{
+    margin-top:14px; font-family:'Share Tech Mono', monospace;
+    font-size:clamp(11px,1.6vw,18px); letter-spacing:.55em;
+    color:#8fd0ff; text-transform:uppercase;
+    animation:flick 3.4s steps(1) infinite;
+  }
+
+  /* RGB split layers */
+  .glitch::before, .glitch::after{
+    content:attr(data-text);
+    position:absolute; top:0; left:0; width:100%;
+    overflow:hidden;
+  }
+  .glitch::before{ color:#ff2e6a; mix-blend-mode:screen; animation:split-a 2.4s infinite steps(2,end); }
+  .glitch::after { color:#19e0ff; mix-blend-mode:screen; animation:split-b 1.9s infinite steps(2,end); }
+
+  @keyframes split-a{
+    0%,100%{ transform:translate(-3px,0); clip-path:inset(0 0 62% 0); }
+    20%{ transform:translate(6px,-2px); clip-path:inset(12% 0 40% 0); }
+    40%{ transform:translate(-8px,3px); clip-path:inset(70% 0 6% 0); }
+    60%{ transform:translate(4px,1px);  clip-path:inset(30% 0 52% 0); }
+    80%{ transform:translate(-2px,-3px); clip-path:inset(0 0 80% 0); }
+  }
+  @keyframes split-b{
+    0%,100%{ transform:translate(3px,0); clip-path:inset(48% 0 0 0); }
+    25%{ transform:translate(-7px,2px); clip-path:inset(8% 0 66% 0); }
+    50%{ transform:translate(7px,-3px); clip-path:inset(56% 0 22% 0); }
+    75%{ transform:translate(-4px,2px); clip-path:inset(20% 0 60% 0); }
+  }
+  @keyframes flick{
+    0%,96%,100%{ opacity:1; }
+    97%{ opacity:.25; } 98%{ opacity:1; } 99%{ opacity:.5; }
+  }
+
+  /* horizontal jitter on the whole stack */
+  .stack.jit{ animation:jitter .28s steps(2,end) 1; }
+  @keyframes jitter{
+    0%{ transform:translate(0,0); }
+    25%{ transform:translate(-6px,2px) skewX(-2deg); }
+    50%{ transform:translate(5px,-3px); }
+    75%{ transform:translate(-3px,1px) skewX(1.5deg); }
+    100%{ transform:translate(0,0); }
+  }
+
+  /* scanlines */
+  .scan{
+    position:fixed; inset:0; z-index:6; pointer-events:none;
+    background:repeating-linear-gradient(
+      to bottom, rgba(255,255,255,.045) 0 1px, rgba(0,0,0,0) 1px 3px);
+    mix-blend-mode:overlay;
+  }
+  /* moving datamosh band */
+  .band{
+    position:fixed; left:0; right:0; height:14vh; z-index:5; pointer-events:none;
+    background:linear-gradient(90deg, rgba(255,46,106,.10), rgba(25,224,255,.10), rgba(255,46,106,.10));
+    mix-blend-mode:screen;
+    animation:sweep 6.5s linear infinite;
+  }
+  @keyframes sweep{ 0%{ top:-20vh; } 100%{ top:110vh; } }
+
+  .noise{
+    position:fixed; inset:0; z-index:4; pointer-events:none; opacity:.06;
+    mix-blend-mode:screen;
+  }
+
+  .badge{
+    position:fixed; left:14px; bottom:12px; z-index:9;
+    font-family:'Share Tech Mono', monospace; font-size:11px; letter-spacing:.12em;
+    color:rgba(160,200,255,.6); text-transform:uppercase;
+    background:rgba(10,12,20,.4); border:1px solid rgba(120,180,255,.22);
+    padding:6px 10px; border-radius:4px; backdrop-filter:blur(3px); user-select:none;
+  }
+  .badge a{ color:rgba(180,220,255,.9); text-decoration:none; }
+  .badge a:hover{ text-shadow:0 0 8px rgba(120,200,255,.9); }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="stack" id="stack">
+    <div class="glitch" data-text="SIGNAL LOST">SIGNAL LOST</div>
+    <div class="sub">// transmission corrupted — 0xDEADBEEF</div>
+  </div>
+</div>
+<canvas class="noise" id="noise"></canvas>
+<div class="band"></div>
+<div class="scan"></div>
+<div class="badge">RGB Split Glitch &nbsp;<a href="index.html">&larr; Gallery</a></div>
+<script>
+(function(){
+  // datamosh noise on canvas
+  const nz = document.getElementById('noise');
+  const nx = nz.getContext('2d');
+  let W,H,dpr;
+  function size(){
+    dpr = Math.min(window.devicePixelRatio||1, 1.5);
+    W = window.innerWidth; H = window.innerHeight;
+    nz.width = Math.floor(W*dpr*0.5); nz.height = Math.floor(H*dpr*0.5);
+    nz.style.width = W+'px'; nz.style.height = H+'px';
+  }
+  size(); window.addEventListener('resize', size);
+
+  // throttle noise to ~24fps for a chunkier, filmic datamosh feel
+  let last=0;
+  (function loop(t){
+    if(t-last>42){ last=t; noiseFrameOnce(); }
+    requestAnimationFrame(loop);
+  })(0);
+  function noiseFrameOnce(){
+    const w = nz.width, h = nz.height;
+    const img = nx.createImageData(w, h);
+    const d = img.data;
+    for(let i=0;i<d.length;i+=4){
+      const v = (Math.random()*255)|0;
+      d[i]=v; d[i+1]=v; d[i+2]=v; d[i+3]= Math.random()<0.5?255:0;
+    }
+    nx.putImageData(img,0,0);
+  }
+
+  // random horizontal jitter bursts + occasional text glitch-swap
+  const stack = document.getElementById('stack');
+  const glitchEl = document.querySelector('.glitch');
+  const variants = ['SIGNAL LOST','SIGNAL LOST','SIGNAL LOST','SIGN4L L0ST','SIGNAL LOST','SIGNAL_LOST'];
+  function burst(){
+    stack.classList.remove('jit');
+    void stack.offsetWidth;
+    stack.classList.add('jit');
+    if(Math.random()<0.35){
+      glitchEl.textContent = variants[(Math.random()*variants.length)|0];
+      glitchEl.setAttribute('data-text', glitchEl.textContent);
+      setTimeout(()=>{ glitchEl.textContent='SIGNAL LOST'; glitchEl.setAttribute('data-text','SIGNAL LOST'); }, 90+Math.random()*120);
+    }
+  }
+  (function sched(){
+    setTimeout(()=>{ burst(); sched(); }, 900 + Math.random()*2600);
+  })();
+
+  window.addEventListener('mousemove', e=>{
+    const dx = Math.abs((e.clientX - window.innerWidth/2)/window.innerWidth);
+    document.documentElement.style.setProperty('--mx', dx.toFixed(3));
+  });
+  window.addEventListener('click', burst);
+})();
+</script>
+</body>
+</html>

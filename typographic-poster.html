@@ -1,0 +1,124 @@
+<!-- CONCEPT: Kinetic Type Poster — layered bold type sliding in opposing marquees with difference-blend masking -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kinetic Type Poster</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;background:#0d0d0f}
+  #stage{position:fixed;inset:0;width:100vw;height:100vh;background:#0d0d0f;overflow:hidden}
+  .layer{position:absolute;inset:0;will-change:transform}
+  .band{position:absolute;left:0;white-space:nowrap;font-family:'Archivo Black',sans-serif;
+    line-height:1;letter-spacing:-0.02em;will-change:transform;user-select:none}
+  .crimson{color:#e63946}
+  .cream{color:#f2ecdf}
+  .yellow{color:#f4c430}
+  .outline{color:transparent;-webkit-text-stroke:2px #f2ecdf}
+  .big{font-size:min(34vw,44vh)}
+  .mid{font-size:min(12vw,15vh)}
+  .tiny{font-family:'Space Mono',monospace;font-weight:700;font-size:min(3.2vw,4.2vh);letter-spacing:.05em}
+  /* rotating big slab */
+  #slab{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-14deg);
+    font-family:'Archivo Black',sans-serif;font-size:min(30vw,38vh);line-height:.9;
+    color:#e63946;white-space:nowrap;mix-blend-mode:difference;will-change:transform;text-align:center}
+  #slab span{display:block;color:#f2ecdf}
+  #slab span.diff{color:#e63946}
+  #disc{position:absolute;width:min(46vh,46vw);height:min(46vh,46vw);border-radius:50%;
+    left:72%;top:24%;transform:translate(-50%,-50%);
+    background:radial-gradient(circle at 40% 35%, #f4c430, #e63946 70%);
+    mix-blend-mode:difference;will-change:transform}
+  #mark{position:absolute;left:6vw;bottom:9vh;font-family:'Space Mono',monospace;font-weight:700;
+    font-size:min(2.4vw,3vh);letter-spacing:.35em;color:#f2ecdf;text-transform:uppercase}
+  #mark small{display:block;letter-spacing:.18em;font-weight:400;color:#8f8f97;margin-top:.6em}
+  #badge{position:fixed;left:16px;bottom:14px;z-index:20;font-family:'Space Mono',monospace;
+    font-size:10px;letter-spacing:.14em;color:rgba(240,236,223,.5);text-transform:uppercase;
+    display:flex;gap:10px;align-items:center}
+  #badge a{color:rgba(240,236,223,.5);text-decoration:none;border-bottom:1px solid rgba(240,236,223,.2)}
+  #badge a:hover{color:#f4c430}
+  #badge .dot{width:4px;height:4px;border-radius:50%;background:#e63946;box-shadow:0 0 8px #e63946}
+  .grain{position:absolute;inset:0;pointer-events:none;opacity:.5;
+    background-image:radial-gradient(rgba(255,255,255,.045) 1px,transparent 1px);
+    background-size:3px 3px}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="slab"><span>KINE</span><span class="diff">TIC</span></div>
+  <div id="disc"></div>
+
+  <div class="band crimson mid" id="b1" style="top:6vh"></div>
+  <div class="band outline big" id="b2" style="top:24vh"></div>
+  <div class="band cream mid" id="b3" style="top:56vh"></div>
+  <div class="band yellow tiny" id="b4" style="top:80vh"></div>
+  <div class="band cream tiny" id="b5" style="top:88vh"></div>
+
+  <div id="mark">Motion &amp; Type<small>Constructed / Live / Vol. 04</small></div>
+  <div class="grain"></div>
+</div>
+<div id="badge"><span class="dot"></span><span>Kinetic Type</span><span>&middot;</span><a href="index.html">&larr; Gallery</a></div>
+<script>
+(()=>{
+  const words={
+    b1:'FORM FOLLOWS MOTION — ',
+    b2:'KINETIC · TYPOGRAPHY · ',
+    b3:'SLIDE / MASK / LAYER — ',
+    b4:'▚ REPEAT  ▞ REPEAT  ',
+    b5:'GRID → RHYTHM → MOTION — '
+  };
+  const bands=[...document.querySelectorAll('.band')].map((el,i)=>({
+    el,
+    speed:[1.6,-2.4,2.0,-3.2,1.1][i],
+    dir:[1,-1,1,-1,1][i],
+    phase:Math.random()*1000
+  }));
+  // fill each band with enough repeats to exceed viewport width
+  bands.forEach(b=>{
+    const w=words[b.el.id];
+    let s=''; for(let i=0;i<60;i++) s+=w;
+    b.el.textContent=s;
+  });
+
+  const slab=document.getElementById('slab');
+  const disc=document.getElementById('disc');
+  const stage=document.getElementById('stage');
+  const mouse={x:0,y:0,tx:0,ty:0};
+
+  window.addEventListener('pointermove',e=>{
+    mouse.tx=(e.clientX/innerWidth-0.5);
+    mouse.ty=(e.clientY/innerHeight-0.5);
+  });
+
+  let t=0;
+  function loop(){
+    t+=0.016;
+    mouse.x+=(mouse.tx-mouse.x)*0.06;
+    mouse.y+=(mouse.ty-mouse.y)*0.06;
+
+    bands.forEach(b=>{
+      const w=b.el.scrollWidth/60;             // one repeat width
+      const off=((t*b.speed*40)%w);
+      const base=b.dir>0? -off : off-w;
+      b.el.style.transform=`translateX(${base}px)`;
+    });
+
+    // slab gentle bob + slight counter-rotation following cursor
+    const rot=-14 + mouse.x*6;
+    slab.style.transform=`translate(-50%,-50%) rotate(${rot}deg) translate(${mouse.x*26}px,${mouse.y*20 + Math.sin(t*0.8)*8}px)`;
+
+    // disc orbits slowly, parallaxing
+    const dx=Math.cos(t*0.35)*6 + mouse.x*40;
+    const dy=Math.sin(t*0.5)*6 + mouse.y*40;
+    disc.style.transform=`translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(${1+Math.sin(t*0.7)*0.03})`;
+
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

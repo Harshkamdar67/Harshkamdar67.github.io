@@ -1,0 +1,171 @@
+<!-- Harmonograph 3D — luminous filament curves from a three-axis pendulum drawing -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Harmonograph 3D</title>
+<style>
+  html,body{margin:0;height:100%;background:#03030c;overflow:hidden;}
+  canvas{display:block;}
+  .badge{position:fixed;left:14px;bottom:14px;z-index:5;
+    font:12px/1.4 ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;
+    color:rgba(255,255,255,.6);background:rgba(6,6,20,.42);backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+    border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:7px 13px;letter-spacing:.03em;}
+  .badge a{color:rgba(255,255,255,.86);text-decoration:none;border-bottom:1px solid rgba(255,255,255,.28);}
+  .badge a:hover{color:#fff;}
+</style>
+</head>
+<body>
+<div class="badge">Harmonograph 3D &nbsp;&middot;&nbsp; <a href="index.html">&larr; Gallery</a></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+'use strict';
+var scene=new THREE.Scene();
+var camera=new THREE.PerspectiveCamera(46,window.innerWidth/window.innerHeight,0.1,100);
+camera.position.set(0,0,7.2);
+
+var renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+renderer.setSize(window.innerWidth,window.innerHeight);
+renderer.setClearColor(0x03030c,1);
+document.body.appendChild(renderer.domElement);
+
+window.addEventListener('resize',function(){
+  camera.aspect=window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth,window.innerHeight);
+});
+
+/* ---- curve geometry ---- */
+var MAX=16000, K=70;
+var pos=new Float32Array(MAX*3);
+var col=new Float32Array(MAX*3);
+var geo=new THREE.BufferGeometry();
+geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+geo.setAttribute('color',new THREE.BufferAttribute(col,3));
+geo.setDrawRange(0,0);
+
+function glowTex(){
+  var s=64,c=document.createElement('canvas'); c.width=c.height=s;
+  var g=c.getContext('2d');
+  var gr=g.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2);
+  gr.addColorStop(0,'rgba(255,255,255,1)');
+  gr.addColorStop(0.22,'rgba(255,255,255,0.5)');
+  gr.addColorStop(1,'rgba(255,255,255,0)');
+  g.fillStyle=gr; g.fillRect(0,0,s,s);
+  return new THREE.CanvasTexture(c);
+}
+var tex=glowTex();
+
+var tints=[0x7fe6ff,0xff7fe6,0xffd68a];
+var world=new THREE.Group();
+scene.add(world);
+var mats=[];
+for(var i=0;i<3;i++){
+  var lm=new THREE.LineBasicMaterial({vertexColors:true,transparent:true,opacity:1,
+    blending:THREE.AdditiveBlending,depthWrite:false});
+  lm.color=new THREE.Color(tints[i]);
+  var pm=new THREE.PointsMaterial({size:0.11,map:tex,vertexColors:true,transparent:true,
+    opacity:0.85,blending:THREE.AdditiveBlending,depthWrite:false,sizeAttenuation:true});
+  pm.color=new THREE.Color(tints[i]);
+  var sub=new THREE.Group();
+  sub.rotation.z=i*(Math.PI*2/3);
+  sub.rotation.x=0.16*i;
+  sub.add(new THREE.Line(geo,lm));
+  sub.add(new THREE.Points(geo,pm));
+  world.add(sub);
+  mats.push(lm); mats.push(pm);
+}
+
+/* ---- harmonograph: three pendulum terms per axis ---- */
+var P={};
+function regen(){
+  var r=function(){return Math.random()*6.28318;};
+  P={
+    fx:[3,5,7], fy:[2,4,7], fz:[1,3,6],
+    px:[r(),r(),r()], py:[r(),r(),r()], pz:[r(),r(),r()],
+    ax:[1.20,0.58,0.30], ay:[1.20,0.58,0.30], az:[1.00,0.48,0.26]
+  };
+}
+regen();
+
+var count=0, tParam=0, dT=2*Math.PI/MAX;
+var state='draw', fadeT=0;
+var colA=new THREE.Color(0x39d0ff), colB=new THREE.Color(0xff5ad0), colC=new THREE.Color(0xffe08a);
+
+function pushPoint(){
+  var t=tParam, x=0,y=0,z=0;
+  for(var i=0;i<3;i++){
+    x+=P.ax[i]*Math.sin(P.fx[i]*t+P.px[i]);
+    y+=P.ay[i]*Math.sin(P.fy[i]*t+P.py[i]);
+    z+=P.az[i]*Math.sin(P.fz[i]*t+P.pz[i]);
+  }
+  var o=count*3;
+  pos[o]=x; pos[o+1]=y; pos[o+2]=z;
+  var u=count/MAX;
+  var c1,c2,f;
+  if(u<0.5){ c1=colA; c2=colB; f=u*2; } else { c1=colB; c2=colC; f=(u-0.5)*2; }
+  var rr=c1.r+(c2.r-c1.r)*f;
+  var gg=c1.g+(c2.g-c1.g)*f;
+  var bb=c1.b+(c2.b-c1.b)*f;
+  var br=0.4+0.6*Math.sin(Math.PI*Math.min(1,u*1.05));
+  col[o]=rr*br; col[o+1]=gg*br; col[o+2]=bb*br;
+  count++;
+}
+
+/* ---- interaction ---- */
+var mxr=0, myr=0, dragging=false, lx=0, ly=0;
+window.addEventListener('pointerdown',function(e){dragging=true;lx=e.clientX;ly=e.clientY;});
+window.addEventListener('pointerup',function(){dragging=false;});
+window.addEventListener('pointercancel',function(){dragging=false;});
+window.addEventListener('pointermove',function(e){
+  if(!dragging)return;
+  myr+=(e.clientX-lx)*0.006;
+  mxr+=(e.clientY-ly)*0.006;
+  mxr=Math.max(-1.4,Math.min(1.4,mxr));
+  lx=e.clientX; ly=e.clientY;
+});
+window.addEventListener('dblclick',function(){ count=0; tParam=0; regen(); geo.setDrawRange(0,0); });
+
+var last=0;
+function frame(now){
+  if(!last) last=now;
+  var dt=Math.min(0.05,(now-last)/1000); last=now;
+  var t=now/1000;
+
+  if(state==='draw'){
+    for(var k=0;k<K && count<MAX;k++){ pushPoint(); tParam+=dT; }
+    geo.attributes.position.needsUpdate=true;
+    geo.attributes.color.needsUpdate=true;
+    geo.setDrawRange(0,count);
+    if(count>=MAX){ state='hold'; fadeT=0; }
+  } else if(state==='hold'){
+    fadeT+=dt;
+    if(fadeT>=3.0){ state='fadeout'; fadeT=0; }
+  } else if(state==='fadeout'){
+    fadeT+=dt;
+    var o=Math.max(0,1-fadeT/0.9);
+    for(var i=0;i<mats.length;i++) mats[i].opacity=o*(i%2===0?1:0.5);
+    if(fadeT>=0.9){ count=0; tParam=0; regen(); geo.setDrawRange(0,0); state='fadein'; fadeT=0; }
+  } else {
+    fadeT+=dt;
+    var o2=Math.min(1,fadeT/0.9);
+    for(var j=0;j<mats.length;j++) mats[j].opacity=o2*(j%2===0?1:0.5);
+    if(fadeT>=0.9) state='draw';
+  }
+
+  world.rotation.y=t*0.16+myr;
+  world.rotation.x=mxr+Math.sin(t*0.1)*0.12;
+  world.rotation.z=Math.sin(t*0.07)*0.08;
+
+  renderer.render(scene,camera);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!-- CONCEPT: String Art Envelope — chords between pegs on a circle trace a morphing cardioid/modular curve as the multiplier is animated -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>String Art Envelope</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;background:#0a0714}
+  canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh}
+  #badge{position:fixed;left:16px;bottom:14px;z-index:10;font-family:'Space Mono',monospace;
+    font-size:10px;letter-spacing:.14em;color:rgba(230,200,150,.6);text-transform:uppercase;
+    display:flex;gap:10px;align-items:center}
+  #badge a{color:rgba(230,200,150,.6);text-decoration:none;border-bottom:1px solid rgba(230,200,150,.25)}
+  #badge a:hover{color:#ffd98a}
+  #badge .dot{width:4px;height:4px;border-radius:50%;background:#ffc65c;box-shadow:0 0 8px #ffc65c}
+  .hint{position:fixed;right:16px;bottom:14px;font-family:'Space Mono',monospace;font-size:10px;
+    letter-spacing:.14em;color:rgba(230,200,150,.4);text-transform:uppercase}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="badge"><span class="dot"></span><span>String Art Envelope</span><span>&middot;</span><a href="index.html">&larr; Gallery</a></div>
+<div class="hint">drag &middot; scroll to reseed multiplier</div>
+<script>
+(()=>{
+  const cvs=document.getElementById('c'), ctx=cvs.getContext('2d');
+  let W,H,DPR,cx,cy,R;
+  const N=200;                       // pegs
+  let K=3;                           // multiplier
+  let targetK=3;
+  let auto=0, autoOn=true;
+
+  function resize(){
+    DPR=Math.min(window.devicePixelRatio||1,2);
+    W=innerWidth;H=innerHeight;
+    cvs.width=Math.floor(W*DPR);cvs.height=Math.floor(H*DPR);
+    cvs.style.width=W+'px';cvs.style.height=H+'px';
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    cx=W/2;cy=H/2;R=Math.min(W,H)*0.40;
+  }
+
+  const pegs=[];
+  for(let i=0;i<N;i++){
+    const a=(i/N)*Math.PI*2 - Math.PI/2;
+    pegs.push({a});
+  }
+
+  function draw(){
+    // trail-fade background
+    ctx.fillStyle='rgba(10,7,20,0.10)';
+    ctx.fillRect(0,0,W,H);
+    ctx.globalCompositeOperation='lighter';
+
+    const pts=pegs.map(p=>({x:cx+Math.cos(p.a)*R, y:cy+Math.sin(p.a)*R}));
+
+    // chords
+    ctx.lineWidth=1;
+    for(let i=0;i<N;i++){
+      const j=Math.floor((i*K)%N + N)%N;
+      const a=pts[i], b=pts[j];
+      const t=i/N;
+      const hue=38 + Math.sin(t*Math.PI*2)*18 + 8;
+      ctx.strokeStyle=`hsla(${hue},95%,62%,0.20)`;
+      ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+    }
+
+    // pegs
+    for(let i=0;i<N;i++){
+      const a=pegs[i].a;
+      const x=cx+Math.cos(a)*R, y=cy+Math.sin(a)*R;
+      const pulse=0.5+0.5*Math.sin(performance.now()*0.003 + i*0.4);
+      ctx.fillStyle=`hsla(42,100%,${70+pulse*20}%,${0.55})`;
+      ctx.beginPath(); ctx.arc(x,y,1.5,0,7); ctx.fill();
+    }
+    // faint guide circle
+    ctx.strokeStyle='rgba(255,210,140,0.08)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.arc(cx,cy,R,0,7); ctx.stroke();
+
+    ctx.globalCompositeOperation='source-over';
+
+    // readout
+    ctx.font='500 15px "Cormorant Garamond", serif';
+    ctx.fillStyle='rgba(255,222,160,0.85)';
+    ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+    ctx.fillText('multiplier  '+K.toFixed(0)+' / '+N, 28, 46);
+    ctx.font='400 11px "Space Mono", monospace';
+    ctx.fillStyle='rgba(255,222,160,0.42)';
+    ctx.fillText('n = '+N+' pegs  ·  chord i → i·k mod n', 28, 64);
+
+    // soft vignette
+    const g=ctx.createRadialGradient(cx,cy,R*0.2,cx,cy,R*1.7);
+    g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(6,4,12,0.7)');
+    ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  }
+
+  function loop(){
+    if(autoOn){
+      auto+=0.006;
+      targetK = 2 + 7*Math.abs(Math.sin(auto)); // elegant envelope sweep 2..9
+    }
+    K += (targetK-K)*0.06;
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  // interaction
+  let dragging=false, startY=0, startK=0;
+  cvs.addEventListener('pointerdown',e=>{dragging=true;autoOn=false;startY=e.clientY;startK=targetK;});
+  window.addEventListener('pointerup',()=>{dragging=false;});
+  window.addEventListener('pointermove',e=>{
+    if(dragging){ targetK=Math.max(1,Math.min(60,startK+(e.clientY-startY)*0.08)); }
+  });
+  cvs.addEventListener('wheel',e=>{e.preventDefault();autoOn=false;targetK=Math.max(1,Math.min(60,targetK+Math.sign(e.deltaY)*0.5));},{passive:false});
+  cvs.addEventListener('dblclick',()=>{autoOn=!autoOn;});
+
+  addEventListener('resize',resize);
+  resize();loop();
+})();
+</script>
+</body>
+</html>

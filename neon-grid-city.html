@@ -1,0 +1,123 @@
+<!-- Neon Grid City - synthwave shader grid, retro banded sun, neon skyline, gliding camera -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Neon Grid City</title>
+<style>
+html,body{margin:0;height:100%;background:#0a0118;overflow:hidden}
+#c{display:block;width:100vw;height:100vh}
+.badge{position:fixed;left:18px;bottom:16px;z-index:5;font:11px/1.5 ui-monospace,Menlo,monospace;
+letter-spacing:.16em;color:rgba(255,190,240,.5);text-transform:uppercase}
+.badge a{color:rgba(120,240,255,.9);text-decoration:none}
+.badge a:hover{color:#fff}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="badge">Neon Grid City &middot; <a href="index.html">&larr; Gallery</a></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+"use strict";
+var scene=new THREE.Scene();
+scene.background=new THREE.Color(0x0a0118);
+scene.fog=new THREE.FogExp2(0x0a0118,0.0075);
+var camera=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,0.1,2000);
+camera.position.set(0,7,16);
+var renderer=new THREE.WebGLRenderer({canvas:document.getElementById('c'),antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
+renderer.setSize(innerWidth,innerHeight);
+if(THREE.sRGBEncoding) renderer.outputEncoding=THREE.sRGBEncoding;
+
+function sunTex(){
+  var w=256,h=256,cv=document.createElement('canvas');cv.width=w;cv.height=h;
+  var g=cv.getContext('2d');
+  var gr=g.createLinearGradient(0,0,0,h);
+  gr.addColorStop(0,'#fff6b0');gr.addColorStop(0.32,'#ffb03c');
+  gr.addColorStop(0.66,'#ff3d81');gr.addColorStop(1,'#7a1cff');
+  g.fillStyle=gr;g.fillRect(0,0,w,h);
+  g.globalCompositeOperation='destination-out';
+  for(var i=0;i<10;i++){var y=h*0.52+i*h*0.05;g.fillRect(0,y,w,h*0.012+i*h*0.006);}
+  return new THREE.CanvasTexture(cv);
+}
+var sun=new THREE.Mesh(new THREE.CircleGeometry(1,64),
+  new THREE.MeshBasicMaterial({map:sunTex(),transparent:true,depthWrite:false,fog:false}));
+sun.scale.set(120,120,1); sun.position.set(0,32,-320); scene.add(sun);
+
+var horizon=new THREE.Sprite(new THREE.SpriteMaterial({color:0xff2fb0,transparent:true,opacity:0.5,
+  blending:THREE.AdditiveBlending,depthWrite:false,fog:false}));
+horizon.scale.set(600,90,1); horizon.position.set(0,4,-300); scene.add(horizon);
+
+var gridMat=new THREE.ShaderMaterial({
+  transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
+  uniforms:{uTime:{value:0},uA:{value:new THREE.Color(0xff2fb0)},uB:{value:new THREE.Color(0x18e0ff)}},
+  vertexShader:'varying vec3 vW;void main(){vec4 wp=modelMatrix*vec4(position,1.0);vW=wp.xyz;gl_Position=projectionMatrix*viewMatrix*wp;}',
+  fragmentShader:[
+  'uniform float uTime;uniform vec3 uA;uniform vec3 uB;varying vec3 vW;',
+  'float gridLine(vec2 p,float s,float w){vec2 c=p/s;vec2 g=abs(fract(c-0.5)-0.5);return 1.0-smoothstep(0.0,w,min(g.x,g.y));}',
+  'void main(){',
+  '  vec2 p=vW.xz; p.y+=uTime*16.0;',
+  '  float l1=gridLine(p,4.0,0.05); float l2=gridLine(p,20.0,0.02);',
+  '  float dist=length(vW.xz);',
+  '  float fade=1.0-smoothstep(50.0,520.0,dist);',
+  '  vec3 col=mix(uA,uB,smoothstep(0.0,340.0,dist));',
+  '  float glow=l1*0.95+l2*0.55;',
+  '  vec3 o=col*glow*fade*1.7 + col*0.05*fade;',
+  '  gl_FragColor=vec4(o,fade);',
+  '}'].join('\n')
+});
+var grid=new THREE.Mesh(new THREE.PlaneGeometry(1600,1600,1,1),gridMat);
+grid.rotation.x=-Math.PI/2; scene.add(grid);
+
+var city=new THREE.Group(); scene.add(city);
+var boxMat=new THREE.MeshBasicMaterial({color:0x0c0620});
+var edgeA=new THREE.LineBasicMaterial({color:0xff2fb0,transparent:true,opacity:0.9,blending:THREE.AdditiveBlending,depthWrite:false});
+var edgeB=new THREE.LineBasicMaterial({color:0x18e0ff,transparent:true,opacity:0.9,blending:THREE.AdditiveBlending,depthWrite:false});
+var LEN=1000, buildings=[];
+for(var i=0;i<96;i++){
+  var side=Math.random()<0.5?-1:1;
+  var w=3+Math.random()*8, h=8+Math.random()*42, d=3+Math.random()*8;
+  var bg=new THREE.BoxGeometry(w,h,d);
+  var m=new THREE.Mesh(bg,boxMat);
+  m.position.set(side*(11+Math.random()*80),h/2-0.6,-Math.random()*LEN);
+  var e=new THREE.LineSegments(new THREE.EdgesGeometry(bg),Math.random()<0.5?edgeA:edgeB);
+  e.position.copy(m.position);
+  city.add(m);city.add(e);
+  buildings.push({m:m,e:e,h:h});
+}
+
+var mx=0,my=0,tx=0,ty=0;
+addEventListener('mousemove',function(e){mx=(e.clientX/innerWidth-0.5)*2;my=(e.clientY/innerHeight-0.5)*2;});
+addEventListener('resize',function(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+
+var clock=new THREE.Clock(), speed=46, bz=0;
+function animate(){
+  requestAnimationFrame(animate);
+  var dt=Math.min(clock.getDelta(),0.05);
+  var t=clock.getElapsedTime();
+  tx+=(mx-tx)*0.05; ty+=(my-ty)*0.05;
+  gridMat.uniforms.uTime.value=t;
+
+  bz+=speed*dt;
+  for(var i=0;i<buildings.length;i++){
+    var b=buildings[i];
+    b.m.position.z+=speed*dt;
+    if(b.m.position.z>34){b.m.position.z-=LEN; b.m.position.x=(Math.random()<0.5?-1:1)*(11+Math.random()*80);}
+    b.e.position.z=b.m.position.z;
+    b.e.position.x=b.m.position.x;
+  }
+
+  camera.position.x=tx*3.5;
+  camera.position.y=7+Math.sin(t*0.9)*0.35-ty*2.5;
+  camera.lookAt(tx*1.5,7,-40);
+  sun.position.x=tx*20;
+  horizon.position.x=tx*20;
+  renderer.render(scene,camera);
+}
+animate();
+})();
+</script>
+</body>
+</html>

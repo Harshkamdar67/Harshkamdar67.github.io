@@ -1,0 +1,140 @@
+<!-- Holo Globe - dot-matrix globe with glowing arcs and a scanning sweep -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Holo Globe</title>
+<style>
+html,body{margin:0;height:100%;background:#01040a;overflow:hidden}
+#c{display:block;width:100vw;height:100vh}
+.badge{position:fixed;left:18px;bottom:16px;z-index:5;font:11px/1.5 ui-monospace,Menlo,monospace;
+letter-spacing:.16em;color:rgba(160,255,235,.55);text-transform:uppercase}
+.badge a{color:rgba(120,255,225,.9);text-decoration:none}
+.badge a:hover{color:#fff}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="badge">Holo Globe &middot; <a href="index.html">&larr; Gallery</a></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+"use strict";
+var scene=new THREE.Scene();
+scene.background=new THREE.Color(0x01040a);
+var camera=new THREE.PerspectiveCamera(45,innerWidth/innerHeight,0.1,400);
+var renderer=new THREE.WebGLRenderer({canvas:document.getElementById('c'),antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
+renderer.setSize(innerWidth,innerHeight);
+if(THREE.sRGBEncoding) renderer.outputEncoding=THREE.sRGBEncoding;
+
+var R=10;
+var group=new THREE.Group(); scene.add(group);
+
+// dot globe
+var N=2800, pts=[], rnd=new Float32Array(N);
+var ga=Math.PI*(3-Math.sqrt(5));
+for(var i=0;i<N;i++){
+  var y=1-(i/(N-1))*2;
+  var r=Math.sqrt(Math.max(0,1-y*y));
+  var th=ga*i;
+  pts.push(Math.cos(th)*r*R, y*R, Math.sin(th)*r*R);
+  rnd[i]=Math.random();
+}
+var dg=new THREE.BufferGeometry();
+dg.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));
+dg.setAttribute('aRand',new THREE.BufferAttribute(rnd,1));
+var dots=new THREE.ShaderMaterial({
+  transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
+  uniforms:{uSweep:{value:0},uTime:{value:0},uCol:{value:new THREE.Color(0x35ffd8)}},
+  vertexShader:[
+  'uniform float uSweep;uniform float uTime;attribute float aRand;varying float vI;',
+  'void main(){vec4 mv=modelViewMatrix*vec4(position,1.0);',
+  ' float d=abs(position.y-uSweep);',
+  ' float hi=1.0-smoothstep(0.0,1.1,d);',
+  ' vI=0.30+hi*2.2+0.18*sin(uTime*3.0+aRand*30.0);',
+  ' gl_PointSize=(2.0+hi*5.5)*(300.0/max(-mv.z,0.001));',
+  ' gl_Position=projectionMatrix*mv;}'].join('\n'),
+  fragmentShader:[
+  'uniform vec3 uCol;varying float vI;',
+  'void main(){float a=smoothstep(0.5,0.0,length(gl_PointCoord-0.5));',
+  ' gl_FragColor=vec4(uCol*vI,a);}'].join('\n')
+});
+group.add(new THREE.Points(dg,dots));
+
+// faint inner sphere
+group.add(new THREE.Mesh(new THREE.SphereGeometry(R*0.985,32,24),
+  new THREE.MeshBasicMaterial({color:0x0a3a44,transparent:true,opacity:0.25,wireframe:true,depthWrite:false})));
+
+// arcs
+var arcMatA=new THREE.Color(0x35ffd8), arcMatB=new THREE.Color(0xff3fd0);
+function surf(i){var k=i*3;return new THREE.Vector3(pts[k],pts[k+1],pts[k+2]);}
+for(var a=0;a<18;a++){
+  var p1=surf(Math.floor(Math.random()*N));
+  var p2=surf(Math.floor(Math.random()*N));
+  if(p1.distanceTo(p2)<R*0.6){a--;continue;}
+  var mid=p1.clone().add(p2).multiplyScalar(0.5);
+  var lift=Math.max(R*1.25, mid.length()*1.6);
+  mid.setLength(lift);
+  var curve=new THREE.QuadraticBezierCurve3(p1,mid,p2);
+  var sp2=curve.getPoints(48);
+  var ag=new THREE.BufferGeometry().setFromPoints(sp2);
+  var ac=new Float32Array(sp2.length*3), tc=new THREE.Color();
+  for(var s=0;s<sp2.length;s++){
+    var f=s/(sp2.length-1);
+    tc.copy(arcMatA).lerp(arcMatB,f);
+    ac[s*3]=tc.r;ac[s*3+1]=tc.g;ac[s*3+2]=tc.b;
+  }
+  ag.setAttribute('color',new THREE.BufferAttribute(ac,3));
+  group.add(new THREE.Line(ag,new THREE.LineBasicMaterial({vertexColors:true,transparent:true,
+    opacity:0.9,blending:THREE.AdditiveBlending,depthWrite:false})));
+}
+
+// sweep ring
+var ring=new THREE.Mesh(new THREE.TorusGeometry(R*1.005,0.045,8,140),
+  new THREE.MeshBasicMaterial({color:0x8bffe8,transparent:true,opacity:0.9,
+    blending:THREE.AdditiveBlending,depthWrite:false}));
+ring.rotation.x=Math.PI/2; group.add(ring);
+
+// outer glow
+function glowTex(){
+  var s=128,cv=document.createElement('canvas');cv.width=cv.height=s;
+  var g=cv.getContext('2d');
+  var gr=g.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2);
+  gr.addColorStop(0,'rgba(90,255,230,0.55)');
+  gr.addColorStop(0.5,'rgba(60,180,255,0.18)');
+  gr.addColorStop(1,'rgba(0,0,0,0)');
+  g.fillStyle=gr;g.fillRect(0,0,s,s);
+  return new THREE.CanvasTexture(cv);
+}
+var halo=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex(),transparent:true,
+  blending:THREE.AdditiveBlending,depthWrite:false}));
+halo.scale.set(38,38,1); scene.add(halo);
+
+var mx=0,my=0,tx=0,ty=0;
+addEventListener('mousemove',function(e){mx=(e.clientX/innerWidth-0.5)*2;my=(e.clientY/innerHeight-0.5)*2;});
+addEventListener('resize',function(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+
+var clock=new THREE.Clock();
+function animate(){
+  requestAnimationFrame(animate);
+  var t=clock.getElapsedTime();
+  tx+=(mx-tx)*0.05; ty+=(my-ty)*0.05;
+  group.rotation.y=t*0.22;
+  var sweep=(Math.sin(t*0.6)+1)*0.5*2*R-R;
+  dots.uniforms.uSweep.value=sweep;
+  dots.uniforms.uTime.value=t;
+  ring.position.y=sweep;
+
+  var a=t*0.08+tx*0.7;
+  var rad=30;
+  camera.position.set(Math.sin(a)*rad,Math.sin(t*0.4)*3-ty*10,Math.cos(a)*rad);
+  camera.lookAt(0,0,0);
+  renderer.render(scene,camera);
+}
+animate();
+})();
+</script>
+</body>
+</html>

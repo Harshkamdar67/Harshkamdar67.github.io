@@ -1,0 +1,127 @@
+<!-- svg-morph — Organic Blob Morph -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blob Morph</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;background:#04100f;overflow:hidden}
+  body{font-family:'Space Mono',monospace}
+  #stage{position:fixed;inset:0;width:100vw;height:100vh;display:block}
+  .badge{position:fixed;left:18px;bottom:18px;z-index:10;display:inline-flex;gap:10px;align-items:baseline;
+    padding:7px 14px;border:1px solid rgba(180,255,235,.16);border-radius:999px;background:rgba(6,20,18,.4);
+    -webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);color:rgba(224,255,246,.7);
+    text-decoration:none;font-size:10px;letter-spacing:.16em;text-transform:uppercase;opacity:.7;
+    transition:opacity .4s,border-color .4s}
+  .badge:hover{opacity:1;border-color:rgba(180,255,235,.5)}
+  .badge .t{font-family:'Instrument Serif',serif;font-size:15px;letter-spacing:.02em;text-transform:none;color:rgba(240,255,250,.92)}
+  .badge .g{color:rgba(224,255,246,.45)}
+</style>
+</head>
+<body>
+<svg id="stage" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-label="Morphing organic blobs">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="78%">
+      <stop offset="0%" stop-color="#0b2b26"/>
+      <stop offset="55%" stop-color="#061a18"/>
+      <stop offset="100%" stop-color="#04100f"/>
+    </radialGradient>
+    <radialGradient id="g1" cx="42%" cy="38%" r="62%">
+      <stop offset="0%" stop-color="#7dffe0"/>
+      <stop offset="45%" stop-color="#12b39c"/>
+      <stop offset="100%" stop-color="#062c28"/>
+    </radialGradient>
+    <radialGradient id="g2" cx="52%" cy="40%" r="62%">
+      <stop offset="0%" stop-color="#ffe08a"/>
+      <stop offset="45%" stop-color="#e0952b"/>
+      <stop offset="100%" stop-color="#3a2408"/>
+    </radialGradient>
+    <radialGradient id="g3" cx="46%" cy="42%" r="62%">
+      <stop offset="0%" stop-color="#ffab7a"/>
+      <stop offset="48%" stop-color="#d1461f"/>
+      <stop offset="100%" stop-color="#2e0d06"/>
+    </radialGradient>
+    <radialGradient id="g4" cx="50%" cy="40%" r="62%">
+      <stop offset="0%" stop-color="#8fc4ff"/>
+      <stop offset="48%" stop-color="#1f57a8"/>
+      <stop offset="100%" stop-color="#07142e"/>
+    </radialGradient>
+    <filter id="aura" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="34"/>
+    </filter>
+    <filter id="soft" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="4"/>
+    </filter>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.055"/></feComponentTransfer>
+    </filter>
+    <radialGradient id="vig" cx="50%" cy="46%" r="72%">
+      <stop offset="55%" stop-color="#000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000" stop-opacity="0.72"/>
+    </radialGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <g id="aura" style="mix-blend-mode:screen" filter="url(#aura)" opacity="0.62"></g>
+  <g id="main" style="mix-blend-mode:screen" filter="url(#soft)"></g>
+  <rect width="1600" height="900" fill="url(#vig)"/>
+  <rect width="1600" height="900" filter="url(#grain)" style="mix-blend-mode:overlay" opacity="0.7"/>
+</svg>
+<a class="badge" href="index.html"><span class="t">Blob Morph</span><span class="g">&larr; Gallery</span></a>
+<script>
+(function(){
+  var NS="http://www.w3.org/2000/svg";
+  var svg=document.getElementById("stage");
+  var aura=document.getElementById("aura"), main=document.getElementById("main");
+  var specs=[
+    {cx:520,cy:415,base:238,amp:.30,seed:0.0,speed:1.00,grad:"g1"},
+    {cx:995,cy:355,base:268,amp:.26,seed:2.1,speed:0.82,grad:"g2"},
+    {cx:735,cy:620,base:218,amp:.32,seed:4.2,speed:1.15,grad:"g3"},
+    {cx:1105,cy:610,base:198,amp:.34,seed:6.3,speed:0.92,grad:"g4"}
+  ];
+  function mk(g,s){var p=document.createElementNS(NS,"path");p.setAttribute("fill","url(#"+s.grad+")");g.appendChild(p);return p;}
+  var aP=specs.map(function(s){return mk(aura,s);});
+  var mP=specs.map(function(s){return mk(main,s);});
+  function cr(pts){
+    var n=pts.length,d="M"+pts[0][0].toFixed(1)+","+pts[0][1].toFixed(1);
+    for(var i=0;i<n;i++){
+      var p0=pts[(i-1+n)%n],p1=pts[i],p2=pts[(i+1)%n],p3=pts[(i+2)%n];
+      var c1x=p1[0]+(p2[0]-p0[0])/6,c1y=p1[1]+(p2[1]-p0[1])/6;
+      var c2x=p2[0]-(p3[0]-p1[0])/6,c2y=p2[1]-(p3[1]-p1[1])/6;
+      d+="C"+c1x.toFixed(1)+","+c1y.toFixed(1)+" "+c2x.toFixed(1)+","+c2y.toFixed(1)+" "+p2[0].toFixed(1)+","+p2[1].toFixed(1);
+    }
+    return d+"Z";
+  }
+  var N=9,mx=800,my=450,tx=800,ty=450;
+  window.addEventListener("pointermove",function(e){
+    var r=svg.getBoundingClientRect();
+    tx=(e.clientX-r.left)/r.width*1600; ty=(e.clientY-r.top)/r.height*900;
+  },{passive:true});
+  function frame(now){
+    mx+=(tx-mx)*0.05; my+=(ty-my)*0.05;
+    var t=now/1000, pullX=(mx-800)*0.07, pullY=(my-450)*0.07;
+    for(var i=0;i<specs.length;i++){
+      var s=specs[i],cx=s.cx+pullX,cy=s.cy+pullY,pts=[];
+      for(var k=0;k<N;k++){
+        var ang=k/N*Math.PI*2;
+        var rr=s.base*(1+s.amp*(0.55*Math.sin(t*s.speed+k*1.7+s.seed)
+                              +0.30*Math.sin(t*s.speed*1.7+k*2.9+s.seed*2)
+                              +0.15*Math.sin(t*s.speed*0.6+k*0.9+s.seed*3)));
+        pts.push([cx+Math.cos(ang)*rr,cy+Math.sin(ang)*rr]);
+      }
+      var d=cr(pts);
+      aP[i].setAttribute("d",d); mP[i].setAttribute("d",d);
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

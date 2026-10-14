@@ -1,0 +1,119 @@
+<!-- Concept 54 · Neumorph — soft-UI extruded and inset elements on a tactile light surface -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Neumorph</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --surface:#e7ebf2;
+    --light:#ffffff;
+    --dark:#c3cbd8;
+    --ink:#4b5566;
+    --accent:#5b6cff;
+  }
+  html,body{width:100%;height:100%}
+  body{background:var(--surface);color:var(--ink);font-family:"Outfit",system-ui,sans-serif;
+    overflow:hidden;display:grid;place-items:center}
+  .app{width:min(94vw,560px);padding:clamp(1.6rem,4vw,3rem);border-radius:38px;
+    background:var(--surface);
+    box-shadow:22px 22px 44px var(--dark),-22px -22px 44px var(--light);
+    transition:box-shadow .3s ease}
+  .head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:1.6rem}
+  .head h1{font-weight:700;font-size:clamp(1.2rem,4vw,1.7rem);letter-spacing:-.02em;color:#39414f}
+  .head span{font-family:"Space Mono",monospace;font-size:.62rem;letter-spacing:.32em;text-transform:uppercase;color:#8a93a4}
+  .inset{border-radius:24px;padding:1.3rem;margin-bottom:1.5rem;
+    background:var(--surface);
+    box-shadow:inset 8px 8px 18px var(--dark),inset -8px -8px 18px var(--light)}
+  .meter{height:16px;border-radius:999px;background:var(--surface);overflow:hidden;
+    box-shadow:inset 5px 5px 10px var(--dark),inset -5px -5px 10px var(--light)}
+  .meter i{display:block;height:100%;width:64%;border-radius:999px;
+    background:linear-gradient(90deg,#8ea1ff,#5b6cff);box-shadow:0 0 14px rgba(91,108,255,.55);
+    animation:pulse 3.4s ease-in-out infinite}
+  @keyframes pulse{0%,100%{width:52%}50%{width:82%}}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin-bottom:1.5rem}
+  .knob{display:grid;place-items:center;aspect-ratio:1;border-radius:50%;
+    background:var(--surface);
+    box-shadow:12px 12px 24px var(--dark),-12px -12px 24px var(--light);
+    cursor:grab;touch-action:none;user-select:none}
+  .knob .dial{width:74%;aspect-ratio:1;border-radius:50%;background:var(--surface);position:relative;
+    box-shadow:inset 6px 6px 12px var(--dark),inset -6px -6px 12px var(--light)}
+  .knob .dial::after{content:"";position:absolute;left:50%;top:14%;width:8px;height:26%;border-radius:999px;
+    background:var(--accent);transform:translateX(-50%);box-shadow:0 0 12px rgba(91,108,255,.6)}
+  .knob .lab{margin-top:.7rem;font-family:"Space Mono",monospace;font-size:.58rem;letter-spacing:.24em;
+    text-transform:uppercase;color:#8a93a4}
+  .toggles{display:flex;flex-direction:column;gap:1rem}
+  .trow{display:flex;align-items:center;justify-content:space-between;
+    padding:.85rem 1.1rem;border-radius:18px;background:var(--surface);
+    box-shadow:8px 8px 18px var(--dark),-8px -8px 18px var(--light)}
+  .trow b{font-weight:500;font-size:.9rem}
+  .switch{position:relative;width:62px;height:34px;border-radius:999px;background:var(--surface);
+    box-shadow:inset 4px 4px 9px var(--dark),inset -4px -4px 9px var(--light);cursor:pointer;
+    transition:box-shadow .3s ease}
+  .switch i{position:absolute;top:5px;left:5px;width:24px;height:24px;border-radius:50%;
+    background:var(--surface);box-shadow:4px 4px 8px var(--dark),-3px -3px 6px var(--light);
+    transition:left .28s cubic-bezier(.4,1.4,.5,1),background .3s ease}
+  .switch.on{box-shadow:inset 4px 4px 9px var(--dark),inset -4px -4px 9px var(--light),0 0 0 2px rgba(91,108,255,.25)}
+  .switch.on i{left:33px;background:linear-gradient(145deg,#8ea1ff,#4a5bff);
+    box-shadow:0 0 16px rgba(91,108,255,.75)}
+  .btn{margin-top:1.7rem;width:100%;border:none;border-radius:20px;padding:1rem;cursor:pointer;
+    font-family:"Outfit";font-weight:700;font-size:.95rem;letter-spacing:.04em;color:#39414f;
+    background:var(--surface);box-shadow:10px 10px 22px var(--dark),-10px -10px 22px var(--light);
+    transition:box-shadow .18s ease,transform .18s ease,color .2s ease}
+  .btn:hover{color:var(--accent)}
+  .btn:active{box-shadow:inset 6px 6px 14px var(--dark),inset -6px -6px 14px var(--light);transform:translateY(1px)}
+  .badge{position:fixed;bottom:1.1rem;left:1.1rem;z-index:20;font-family:"Space Mono",monospace;
+    font-size:.62rem;letter-spacing:.16em;text-transform:uppercase;color:#6b7488;
+    background:rgba(231,235,242,.7);border:1px solid rgba(0,0,0,.06);border-radius:999px;
+    padding:.5rem .85rem;backdrop-filter:blur(6px)}
+  .badge a{color:var(--accent);text-decoration:none}
+  .badge a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+  <div class="app">
+    <div class="head"><h1>Soft Console</h1><span>neumorphic · 01</span></div>
+    <div class="inset">
+      <div class="meter"><i></i></div>
+    </div>
+    <div class="grid">
+      <div>
+        <div class="knob" id="knob"><div class="dial" id="dial"></div></div>
+        <div class="lab" style="text-align:center">Dial</div>
+      </div>
+      <div>
+        <div class="knob"><div class="dial" style="transform:rotate(-58deg)"></div></div>
+        <div class="lab" style="text-align:center">Fixed</div>
+      </div>
+    </div>
+    <div class="toggles">
+      <div class="trow"><b>Ambient Light</b><div class="switch on" data-sw><i></i></div></div>
+      <div class="trow"><b>Soft Edges</b><div class="switch" data-sw><i></i></div></div>
+      <div class="trow"><b>Deep Relief</b><div class="switch on" data-sw><i></i></div></div>
+    </div>
+    <button class="btn" id="btn">Press the Surface</button>
+  </div>
+  <div class="badge">Neumorph &nbsp;·&nbsp; <a href="index.html">&larr; Gallery</a></div>
+  <script>
+    document.querySelectorAll('[data-sw]').forEach(s=>s.addEventListener('click',()=>s.classList.toggle('on')));
+    const dial=document.getElementById('dial'),knob=document.getElementById('knob');
+    let drag=false,ang=0;
+    function set(cx,cy){
+      const r=knob.getBoundingClientRect();
+      ang=Math.atan2(cy-(r.top+r.height/2),cx-(r.left+r.width/2))*180/Math.PI+90;
+      dial.style.transform=`rotate(${ang}deg)`;
+    }
+    knob.addEventListener('pointerdown',e=>{drag=true;knob.setPointerCapture(e.pointerId);set(e.clientX,e.clientY);});
+    knob.addEventListener('pointermove',e=>{if(drag)set(e.clientX,e.clientY);});
+    knob.addEventListener('pointerup',()=>drag=false);
+    document.getElementById('btn').addEventListener('click',()=>{
+      document.body.animate([{filter:'brightness(1)'},{filter:'brightness(1.12)'},{filter:'brightness(1)'}],{duration:320});
+    });
+  </script>
+</body>
+</html>

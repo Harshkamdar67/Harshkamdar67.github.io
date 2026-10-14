@@ -1,0 +1,98 @@
+<!-- Wire Mountains - procedural wireframe terrain flown over under a gradient sky -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wire Mountains</title>
+<style>
+html,body{margin:0;height:100%;background:#070417;overflow:hidden}
+#c{display:block;width:100vw;height:100vh}
+.badge{position:fixed;left:18px;bottom:16px;z-index:5;font:11px/1.5 ui-monospace,Menlo,monospace;
+letter-spacing:.16em;color:rgba(210,220,255,.5);text-transform:uppercase}
+.badge a{color:rgba(150,240,255,.9);text-decoration:none}
+.badge a:hover{color:#fff}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="badge">Wire Mountains &middot; <a href="index.html">&larr; Gallery</a></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+"use strict";
+var scene=new THREE.Scene();
+scene.fog=new THREE.FogExp2(0x120a2e,0.0072);
+var camera=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,0.1,4000);
+camera.position.set(0,30,40);
+var renderer=new THREE.WebGLRenderer({canvas:document.getElementById('c'),antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.setClearColor(0x070417,1);
+if(THREE.sRGBEncoding) renderer.outputEncoding=THREE.sRGBEncoding;
+
+var skyGeo=new THREE.SphereGeometry(2200,32,24);
+var skyMat=new THREE.ShaderMaterial({
+  side:THREE.BackSide, depthWrite:false,
+  uniforms:{cTop:{value:new THREE.Color(0x05030f)},cMid:{value:new THREE.Color(0x3a1366)},cBot:{value:new THREE.Color(0xff3f8f)}},
+  vertexShader:'varying vec3 vP;void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
+  fragmentShader:[
+  'uniform vec3 cTop;uniform vec3 cMid;uniform vec3 cBot;varying vec3 vP;',
+  'void main(){float h=normalize(vP).y;',
+  ' vec3 c=mix(cBot,cMid,smoothstep(-0.15,0.16,h));',
+  ' c=mix(c,cTop,smoothstep(0.08,0.62,h));',
+  ' gl_FragColor=vec4(c,1.0);}'].join('\n')
+});
+scene.add(new THREE.Mesh(skyGeo,skyMat));
+
+var L=400, W=320;
+var geo=new THREE.PlaneGeometry(W,L,96,120);
+geo.rotateX(-Math.PI/2);
+var kz=Math.PI*2/L;
+function hh(x,z){
+  return Math.sin(x*0.05+kz*z)*7
+       + Math.sin(x*0.11)*Math.cos(kz*2*z)*4.5
+       + Math.cos(kz*3*z+x*0.03)*3
+       + Math.sin(x*0.22)*Math.sin(kz*z)*2.6
+       + Math.sin(x*0.09+kz*5*z)*1.5;
+}
+var pos=geo.attributes.position;
+var cols=new Float32Array(pos.count*3);
+var lo=new THREE.Color(0xff2fb0), hi=new THREE.Color(0x35e6ff), cc=new THREE.Color();
+for(var i=0;i<pos.count;i++){
+  var x=pos.getX(i), z=pos.getZ(i);
+  var y=hh(x,z);
+  pos.setY(i,y);
+  var t=Math.min(1,Math.max(0,(y+14)/28));
+  cc.copy(lo).lerp(hi,t);
+  cols[i*3]=cc.r; cols[i*3+1]=cc.g; cols[i*3+2]=cc.b;
+}
+geo.setAttribute('color',new THREE.BufferAttribute(cols,3));
+var mat=new THREE.MeshBasicMaterial({wireframe:true,vertexColors:true,transparent:true,opacity:0.85,
+  blending:THREE.AdditiveBlending,depthWrite:false});
+var terrain=new THREE.Mesh(geo,mat);
+scene.add(terrain);
+
+var mx=0,my=0,tx=0,ty=0;
+addEventListener('mousemove',function(e){mx=(e.clientX/innerWidth-0.5)*2;my=(e.clientY/innerHeight-0.5)*2;});
+addEventListener('resize',function(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+
+var clock=new THREE.Clock(), speed=95;
+function animate(){
+  requestAnimationFrame(animate);
+  var dt=Math.min(clock.getDelta(),0.05);
+  var t=clock.getElapsedTime();
+  tx+=(mx-tx)*0.05; ty+=(my-ty)*0.05;
+  terrain.position.z+=speed*dt;
+  if(terrain.position.z>=L*0.5) terrain.position.z-=L;
+  camera.position.x=tx*14;
+  camera.position.y=30-ty*9+Math.sin(t*0.7)*1.2;
+  camera.position.z=40;
+  camera.lookAt(tx*10,4,-160);
+  renderer.render(scene,camera);
+}
+animate();
+})();
+</script>
+</body>
+</html>

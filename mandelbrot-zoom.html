@@ -1,0 +1,248 @@
+<!-- Mandelbrot Zoom — a continuous, never-resetting deep dive toward the Misiurewicz point c = i, rendered with perturbation theory (double-precision reference orbit + shader deltas) -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mandelbrot Zoom</title>
+<style>
+  html,body{margin:0;height:100%;background:#000;overflow:hidden;}
+  canvas#c{display:block;width:100vw;height:100vh;}
+  .badge{position:fixed;left:14px;bottom:14px;z-index:5;
+    font:12px/1.4 ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;
+    color:rgba(255,255,255,.62);background:rgba(4,4,12,.42);backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+    border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:7px 13px;letter-spacing:.03em;
+    display:flex;gap:10px;align-items:center;}
+  .badge b{font-weight:600;color:rgba(255,255,255,.9);font-variant-numeric:tabular-nums;}
+  .badge a{color:rgba(255,255,255,.86);text-decoration:none;border-bottom:1px solid rgba(255,255,255,.28);}
+  .badge a:hover{color:#fff;}
+  .hint{position:fixed;right:14px;bottom:14px;z-index:5;font:11px/1.4 ui-monospace,monospace;
+    color:rgba(255,255,255,.34);letter-spacing:.06em;}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="badge">Mandelbrot Zoom &nbsp;·&nbsp; <b id="dep">×10<sup>0</sup></b> &nbsp;·&nbsp; <a href="index.html">&larr; Gallery</a></div>
+<div class="hint">scroll to steer</div>
+<script>
+(function(){
+'use strict';
+var cv=document.getElementById('c');
+var gl=cv.getContext('webgl',{antialias:false,alpha:false,depth:false})||cv.getContext('experimental-webgl');
+if(!gl){document.body.innerHTML='<p style="color:#fff;font:14px sans-serif;padding:2rem">WebGL unavailable.</p>';return;}
+var extF=gl.getExtension('OES_texture_float');
+var highp=gl.getShaderPrecisionFormat(gl.FRAGMENT_SHADER,gl.HIGH_FLOAT);
+var hasHighp=highp&&highp.precision>0;
+
+/* ---- reference point: c = i, a Misiurewicz point (bounded orbit, on the boundary) ---- */
+var CX=0.0, CY=1.0;
+var SETCX=-0.2, SETCY=0.9;
+
+var VS='attribute vec2 a;void main(){gl_Position=vec4(a,0.0,1.0);}';
+var FS=[
+'precision highp float;',
+'uniform vec2 u_res;',
+'uniform vec2 u_c;',
+'uniform vec2 u_off;',
+'uniform float u_scale;',
+'uniform float u_maxIter;',
+'uniform float u_orbitW;',
+'uniform float u_orbitH;',
+'uniform float u_perturb;',
+'uniform sampler2D u_orbit;',
+'uniform float u_time;',
+'uniform float u_fade;',
+'const int MAXI=4000;',
+'vec2 orbitAt(float i){',
+'  float y=floor(i/u_orbitW);',
+'  float x=i-y*u_orbitW;',
+'  return texture2D(u_orbit,vec2((x+0.5)/u_orbitW,(y+0.5)/u_orbitH)).xy;',
+'}',
+'void main(){',
+'  vec2 p=(gl_FragCoord.xy-0.5*u_res)/u_res.x;',
+'  float it=0.0, r2=0.0;',
+'  vec2 z=vec2(0.0);',
+'  if(u_perturb<0.5){',
+'    vec2 c=u_c+p*u_scale;',
+'    for(int i=0;i<MAXI;i++){',
+'      if(float(i)>=u_maxIter) break;',
+'      z=vec2(z.x*z.x-z.y*z.y,2.0*z.x*z.y)+c;',
+'      r2=dot(z,z);',
+'      if(r2>4.0) break;',
+'      it+=1.0;',
+'    }',
+'  }else{',
+'    vec2 P=p+u_off;',
+'    vec2 D=vec2(0.0);',
+'    for(int i=0;i<MAXI;i++){',
+'      if(float(i)>=u_maxIter) break;',
+'      vec2 Z=orbitAt(float(i));',
+'      vec2 d=u_scale*D;',
+'      z=Z+d;',
+'      r2=dot(z,z);',
+'      if(r2>4.0) break;',
+'      vec2 D2=vec2(d.x*D.x-d.y*D.y, d.x*D.y+d.y*D.x);',
+'      D=vec2(2.0*(Z.x*D.x-Z.y*D.y)+D2.x+P.x, 2.0*(Z.x*D.y+Z.y*D.x)+D2.y+P.y);',
+'      it+=1.0;',
+'    }',
+'  }',
+'  vec3 col;',
+'  if(r2>4.0){',
+'    float mu=it+1.0-log2(0.5*log2(r2));',
+'    float ang=atan(z.y,z.x);',
+'    float t=fract(ang*0.1591549+mu*0.11+u_time*0.02);',
+'    vec3 c0=vec3(0.008,0.012,0.038);',
+'    vec3 c1=vec3(0.030,0.150,0.520);',
+'    vec3 c2=vec3(0.120,0.450,0.950);',
+'    vec3 c3=vec3(0.650,0.900,1.000);',
+'    vec3 c4=vec3(1.000,1.000,0.960);',
+'    vec3 c5=vec3(1.000,0.720,0.200);',
+'    col=c0;',
+'    col=mix(col,c1,smoothstep(0.00,0.16,t));',
+'    col=mix(col,c2,smoothstep(0.16,0.34,t));',
+'    col=mix(col,c3,smoothstep(0.34,0.50,t));',
+'    col=mix(col,c4,smoothstep(0.50,0.62,t));',
+'    col=mix(col,c5,smoothstep(0.62,0.80,t));',
+'    col=mix(col,c0*0.5,smoothstep(0.80,1.00,t));',
+'    col*=smoothstep(0.15,5.0,mu);',
+'  }else{',
+'    col=vec3(0.004,0.006,0.014);',
+'  }',
+'  vec2 q=gl_FragCoord.xy/u_res-0.5;',
+'  col*=1.0-0.32*dot(q,q);',
+'  gl_FragColor=vec4(col*u_fade,1.0);',
+'}'
+].join('\n');
+
+function sh(t,s){var o=gl.createShader(t);gl.shaderSource(o,s);gl.compileShader(o);
+  if(!gl.getShaderParameter(o,gl.COMPILE_STATUS))console.error(gl.getShaderInfoLog(o));return o;}
+var prog=gl.createProgram();
+gl.attachShader(prog,sh(gl.VERTEX_SHADER,VS));
+gl.attachShader(prog,sh(gl.FRAGMENT_SHADER,FS));
+gl.linkProgram(prog); gl.useProgram(prog);
+
+var buf=gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
+var loc=gl.getAttribLocation(prog,'a');
+gl.enableVertexAttribArray(loc);
+gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+
+var uRes=gl.getUniformLocation(prog,'u_res'),
+    uC=gl.getUniformLocation(prog,'u_c'),
+    uOff=gl.getUniformLocation(prog,'u_off'),
+    uS=gl.getUniformLocation(prog,'u_scale'),
+    uMI=gl.getUniformLocation(prog,'u_maxIter'),
+    uOW=gl.getUniformLocation(prog,'u_orbitW'),
+    uOH=gl.getUniformLocation(prog,'u_orbitH'),
+    uP=gl.getUniformLocation(prog,'u_perturb'),
+    uO=gl.getUniformLocation(prog,'u_orbit'),
+    uT=gl.getUniformLocation(prog,'u_time'),
+    uF=gl.getUniformLocation(prog,'u_fade');
+
+/* ---- reference orbit, computed in double precision, uploaded as a float texture ---- */
+var ORBW=2048, orbitTex=null, orbitMax=0, orbitRows=1;
+function buildOrbit(n){
+  orbitRows=Math.max(1,Math.ceil(n/ORBW));
+  var data=new Float32Array(ORBW*orbitRows*4);
+  var zx=0, zy=0;
+  for(var i=0;i<n;i++){
+    data[i*4]=zx; data[i*4+1]=zy; data[i*4+2]=0; data[i*4+3]=1;
+    var nx=zx*zx-zy*zy+CX, ny=2*zx*zy+CY;
+    zx=nx; zy=ny;
+  }
+  if(!orbitTex) orbitTex=gl.createTexture();
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D,orbitTex);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,ORBW,orbitRows,0,gl.RGBA,gl.FLOAT,data);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  orbitMax=n;
+}
+
+var W=0,H=0,band=-1;
+function resize(){
+  var dpr=Math.min(window.devicePixelRatio||1,2);
+  var w=window.innerWidth*dpr, h=window.innerHeight*dpr;
+  var b = depth<6?0 : depth<14?1 : depth<24?2 : 3;
+  band=b;
+  var maxPix = b===0?1.6e6 : b===1?1.0e6 : b===2?0.62e6 : 0.42e6;
+  if(w*h>maxPix){var s=Math.sqrt(maxPix/(w*h));w=Math.floor(w*s);h=Math.floor(h*s);}
+  W=Math.max(1,w); H=Math.max(1,h);
+  cv.width=W; cv.height=H;
+  cv.style.width=window.innerWidth+'px'; cv.style.height=window.innerHeight+'px';
+  gl.viewport(0,0,W,H);
+}
+
+/* ---- zoom state ---- */
+var S0=5.2;
+var qs=new URLSearchParams(location.search);
+var depth = qs.has('d') ? parseFloat(qs.get('d')) : 0;
+var DMAX = extF && hasHighp ? 36 : 5.2;
+var RATE = qs.has('speed') ? parseFloat(qs.get('speed')) : 0.13;
+var fade = 0;
+var depEl=document.getElementById('dep');
+var shownDepth=-1;
+
+window.addEventListener('resize',resize);
+resize();
+if(extF&&hasHighp) buildOrbit(400);
+
+window.addEventListener('wheel',function(e){
+  e.preventDefault();
+  depth -= e.deltaY*0.004;
+  if(depth<0) depth=0;
+  if(depth>DMAX-0.05) depth=DMAX-0.05;
+},{passive:false});
+
+var last=0;
+function frame(now){
+  if(!last) last=now;
+  var dt=Math.min(0.05,(now-last)/1000); last=now;
+  var t=now/1000;
+
+  var land = Math.max(0, Math.min(1, (DMAX-depth)/3.0));
+  depth += RATE*dt*land;
+  if(depth>DMAX) depth=DMAX;
+
+  var scale = S0*Math.pow(10,-depth);
+  var needIter = Math.min(4000, Math.floor(300 + 60*depth));
+  if(extF&&hasHighp && needIter>orbitMax) buildOrbit(Math.min(4000,needIter+128));
+
+  var nb = depth<6?0 : depth<14?1 : depth<24?2 : 3;
+  if(nb!==band) resize();
+
+  var perturb = (extF&&hasHighp&&depth>3.2)?1:0;
+
+  if(perturb){ gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D,orbitTex); }
+
+  fade+=dt*1.6; if(fade>1) fade=1;
+
+  gl.uniform2f(uRes,W,H);
+  var pr=Math.min(1,depth/2.5);
+  var vx=SETCX+(CX-SETCX)*pr, vy=SETCY+(CY-SETCY)*pr;
+  gl.uniform2f(uC,vx,vy);
+  gl.uniform2f(uOff,(vx-CX)/scale,(vy-CY)/scale);
+  gl.uniform1f(uS,scale);
+  gl.uniform1f(uMI,needIter);
+  gl.uniform1f(uOW,ORBW);
+  gl.uniform1f(uOH,orbitRows);
+  gl.uniform1f(uP,perturb);
+  gl.uniform1i(uO,0);
+  gl.uniform1f(uT,t);
+  gl.uniform1f(uF,fade);
+  gl.drawArrays(gl.TRIANGLES,0,6);
+
+  var sd=Math.round(depth);
+  if(sd!==shownDepth){ shownDepth=sd; depEl.innerHTML='&times;10<sup>-'+sd+'</sup>'; }
+
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

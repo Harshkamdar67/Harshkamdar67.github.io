@@ -1,0 +1,140 @@
+<!-- Crystal Prism - refractive iridescent crystals over a mirrored dark floor -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Crystal Prism</title>
+<style>
+html,body{margin:0;height:100%;background:#04020c;overflow:hidden}
+#c{display:block;width:100vw;height:100vh}
+.badge{position:fixed;left:18px;bottom:16px;z-index:5;font:11px/1.5 ui-monospace,Menlo,monospace;
+letter-spacing:.16em;color:rgba(230,215,255,.55);text-transform:uppercase}
+.badge a{color:rgba(180,200,255,.9);text-decoration:none}
+.badge a:hover{color:#fff}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="badge">Crystal Prism &middot; <a href="index.html">&larr; Gallery</a></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+"use strict";
+var scene=new THREE.Scene();
+scene.background=new THREE.Color(0x04020c);
+var camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,0.1,300);
+var renderer=new THREE.WebGLRenderer({canvas:document.getElementById('c'),antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
+renderer.setSize(innerWidth,innerHeight);
+if(THREE.sRGBEncoding) renderer.outputEncoding=THREE.sRGBEncoding;
+
+function envTexture(){
+  var w=1024,h=512,cv=document.createElement('canvas');cv.width=w;cv.height=h;
+  var g=cv.getContext('2d');
+  var gr=g.createLinearGradient(0,0,0,h);
+  gr.addColorStop(0,'#160a33');gr.addColorStop(0.44,'#3a1b6e');
+  gr.addColorStop(0.5,'#ff4fa3');gr.addColorStop(0.56,'#18e0ff');
+  gr.addColorStop(1,'#05010f');
+  g.fillStyle=gr;g.fillRect(0,0,w,h);
+  var hues=['#ff5fa2','#5fd0ff','#c08cff','#ffe08a'];
+  for(var i=0;i<14;i++){
+    var x=Math.random()*w,y=Math.random()*h,r=60+Math.random()*180;
+    var rg=g.createRadialGradient(x,y,0,x,y,r);
+    rg.addColorStop(0,hues[i%4]);rg.addColorStop(1,'rgba(0,0,0,0)');
+    g.globalAlpha=0.35;g.fillStyle=rg;g.fillRect(x-r,y-r,r*2,r*2);
+  }
+  g.globalAlpha=1;
+  var tex=new THREE.CanvasTexture(cv);
+  tex.mapping=THREE.EquirectangularReflectionMapping;
+  return tex;
+}
+var pmrem=new THREE.PMREMGenerator(renderer);
+pmrem.compileEquirectangularShader();
+var envRT=pmrem.fromEquirectangular(envTexture());
+var envMap=envRT.texture;
+scene.environment=envMap;
+pmrem.dispose();
+
+var group=new THREE.Group(); scene.add(group);
+var mirrorGroup=new THREE.Group(); scene.add(mirrorGroup);
+var geos=[
+  new THREE.IcosahedronGeometry(1,0),
+  new THREE.OctahedronGeometry(1,0),
+  new THREE.ConeGeometry(0.85,2,6),
+  new THREE.BoxGeometry(1.3,1.3,1.3),
+  new THREE.TetrahedronGeometry(1.15,0),
+  new THREE.DodecahedronGeometry(1,0)
+];
+var colors=[0xff5fa2,0x6fd8ff,0xc9a6ff,0xfff0a8,0x7dffcf,0xff9a5f];
+var M=new THREE.Matrix4().makeScale(1,-1,1);
+var crystals=[];
+for(var i=0;i<11;i++){
+  var gm=geos[i%geos.length];
+  var mat=new THREE.MeshPhysicalMaterial({
+    color:colors[i%colors.length],metalness:0.1,roughness:0.05,
+    transmission:0.92,thickness:1.8,ior:1.45,clearcoat:1.0,clearcoatRoughness:0.05,
+    envMap:envMap,envMapIntensity:1.7,transparent:false,flatShading:false
+  });
+  var m=new THREE.Mesh(gm,mat);
+  var ang=i/11*Math.PI*2, rad=2.8+(i%3)*1.5;
+  m.position.set(Math.cos(ang)*rad,(i%4-1.3)*1.5,Math.sin(ang)*rad);
+  m.scale.setScalar(0.9+Math.random()*1.5);
+  m.rotation.set(Math.random()*3,Math.random()*3,Math.random()*3);
+  m.userData.rv=new THREE.Vector3((Math.random()-0.5)*0.4,(Math.random()-0.5)*0.4,(Math.random()-0.5)*0.4);
+  group.add(m); crystals.push(m);
+
+  var mm=new THREE.Mesh(gm,new THREE.MeshPhysicalMaterial({
+    color:colors[i%colors.length],metalness:0.3,roughness:0.25,
+    envMap:envMap,envMapIntensity:0.8,transparent:true,opacity:0.22,
+    depthWrite:false,side:THREE.DoubleSide
+  }));
+  mm.matrixAutoUpdate=false;
+  mirrorGroup.add(mm);
+}
+
+function floorTex(){
+  var s=512,cv=document.createElement('canvas');cv.width=cv.height=s;
+  var g=cv.getContext('2d');
+  var gr=g.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2);
+  gr.addColorStop(0,'rgba(12,9,28,0.96)');
+  gr.addColorStop(0.6,'rgba(12,9,28,0.7)');
+  gr.addColorStop(1,'rgba(12,9,28,0)');
+  g.fillStyle=gr;g.fillRect(0,0,s,s);
+  return new THREE.CanvasTexture(cv);
+}
+var floor=new THREE.Mesh(new THREE.PlaneGeometry(70,70),
+  new THREE.MeshBasicMaterial({map:floorTex(),transparent:true,depthWrite:false}));
+floor.rotation.x=-Math.PI/2; floor.position.y=0; scene.add(floor);
+
+var mx=0,my=0,tx=0,ty=0;
+addEventListener('mousemove',function(e){mx=(e.clientX/innerWidth-0.5)*2;my=(e.clientY/innerHeight-0.5)*2;});
+addEventListener('resize',function(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+
+var clock=new THREE.Clock();
+function animate(){
+  requestAnimationFrame(animate);
+  var dt=Math.min(clock.getDelta(),0.05);
+  var t=clock.getElapsedTime();
+  tx+=(mx-tx)*0.05; ty+=(my-ty)*0.05;
+
+  group.rotation.y+=dt*0.18;
+  for(var i=0;i<crystals.length;i++){
+    var c=crystals[i], rv=c.userData.rv;
+    c.rotation.x+=rv.x*dt; c.rotation.y+=rv.y*dt; c.rotation.z+=rv.z*dt;
+  }
+  group.updateMatrixWorld(true);
+  for(var j=0;j<crystals.length;j++){
+    mirrorGroup.children[j].matrix.multiplyMatrices(M,crystals[j].matrixWorld);
+  }
+
+  var th=tx*0.9, ph=0.95+ty*0.45, rr=14.5;
+  camera.position.set(Math.sin(th)*Math.cos(ph-0.5)*rr, 1.2+Math.sin(ph)*rr*0.75, Math.cos(th)*Math.cos(ph-0.5)*rr);
+  camera.lookAt(0,0.4,0);
+  renderer.render(scene,camera);
+}
+animate();
+})();
+</script>
+</body>
+</html>

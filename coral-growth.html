@@ -1,0 +1,154 @@
+<!-- Coral Growth — a reef branch unfurling organically, tips glowing as it reaches out -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Coral Growth</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500&display=swap" rel="stylesheet">
+<style>
+  html,body{margin:0;height:100%;background:#000;overflow:hidden;}
+  #c{display:block;width:100vw;height:100vh;}
+  .badge{position:fixed;left:16px;bottom:14px;z-index:9;font-family:'Inter',system-ui,sans-serif;
+    font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:rgba(200,235,255,.5);
+    background:rgba(6,16,26,.32);border:1px solid rgba(120,220,235,.13);border-radius:999px;
+    padding:6px 12px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:color .4s,border-color .4s;}
+  .badge:hover{color:rgba(225,250,255,.92);border-color:rgba(120,220,235,.32);}
+  .badge a{color:inherit;text-decoration:none;}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="badge">Coral Growth&nbsp; ·&nbsp; <a href="index.html">&larr; Gallery</a></div>
+<script>
+(function(){
+  var canvas=document.getElementById('c');
+  var ctx=canvas.getContext('2d');
+  var W=0,H=0,dpr=Math.min(window.devicePixelRatio||1,2);
+
+  var segs=[], tips=[], maxT=1;
+  var state='grow', elapsed=0, treeFade=0, GROW=16;
+  var mx=0.5,tmx=0.5, tt=0;
+
+  function rnd(a,b){return a+Math.random()*(b-a);}
+
+  function grow(x,y,ang,len,width,depth,t0){
+    var n=5+Math.floor(Math.random()*3);
+    var segLen=len/n, ca=ang, px=x, py=y;
+    var curl=(Math.random()-0.5)*0.05;
+    for(var i=0;i<n;i++){
+      ca+=curl+rnd(-0.22,0.22)+Math.sin((t0+i)*0.6+depth)*0.05;
+      var nx=px+Math.cos(ca)*segLen, ny=py+Math.sin(ca)*segLen;
+      segs.push({x0:px,y0:py,x1:nx,y1:ny,t0:t0+i,dur:1.6,width:width*(1-(i/n)*0.35),depth:depth});
+      px=nx;py=ny;
+      if(depth<5 && i>=1 && Math.random()<0.5){
+        grow(px,py,ca+rnd(-1.0,1.0),len*rnd(0.55,0.8),width*0.64,depth+1,t0+i+rnd(0,0.6));
+      }
+    }
+    tips.push({x:px,y:py,t:t0+n,depth:depth});
+  }
+
+  function buildTree(){
+    segs=[];tips=[];
+    var cx=W*0.5, cy=H*1.03;
+    var roots=2+Math.floor(Math.random()*2);
+    for(var r=0;r<roots;r++){
+      var ang=-Math.PI/2+(r-(roots-1)/2)*0.5+rnd(-0.15,0.15);
+      grow(cx+rnd(-W*0.05,W*0.05), cy, ang, H*0.17, 15, 0, 0);
+    }
+    maxT=0.001;
+    for(var i=0;i<segs.length;i++) maxT=Math.max(maxT,segs[i].t0+segs[i].dur);
+  }
+
+  function coralColor(depth,p){
+    var k=Math.min(1,depth/5)*0.75+p*0.25;
+    var r=Math.round(28+k*220);
+    var g=Math.round(70+k*60);
+    var b=Math.round(120+k*60);
+    return [r,g,b];
+  }
+
+  function resize(){
+    W=window.innerWidth;H=window.innerHeight;
+    canvas.width=Math.floor(W*dpr);canvas.height=Math.floor(H*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    buildTree();state='grow';elapsed=0;treeFade=1;
+  }
+  window.addEventListener('mousemove',function(e){tmx=e.clientX/window.innerWidth;});
+  window.addEventListener('touchmove',function(e){if(e.touches[0])tmx=e.touches[0].clientX/window.innerWidth;},{passive:true});
+
+  var last=performance.now();
+  function frame(now){
+    var dt=Math.min(0.05,(now-last)/1000);last=now;tt+=dt;
+    mx+=(tmx-mx)*0.05;
+    elapsed+=dt;
+    if(state==='grow'&&elapsed>GROW){state='fade';elapsed=0;}
+    else if(state==='fade'){
+      treeFade=Math.max(0,1-elapsed/1.8);
+      if(elapsed>1.8){buildTree();state='grow';elapsed=0;treeFade=1;}
+    } else if(state==='grow'){ treeFade=Math.min(1,treeFade+dt*0.8); }
+
+    // background
+    var bg=ctx.createLinearGradient(0,0,0,H);
+    bg.addColorStop(0,'#02060c');bg.addColorStop(0.6,'#04121c');bg.addColorStop(1,'#061c26');
+    ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+
+    var g=Math.min(1.0, elapsed/GROW);
+    var lean=(mx-0.5)*0.10;
+
+    ctx.lineCap='round';ctx.lineJoin='round';
+    // body pass
+    ctx.globalCompositeOperation='source-over';
+    for(var i=0;i<segs.length;i++){
+      var s=segs[i];
+      var p=(g*maxT-s.t0)/s.dur;
+      if(p<=0)continue;if(p>1)p=1;
+      var x1=s.x0+(s.x1-s.x0)*p, y1=s.y0+(s.y1-s.y0)*p;
+      var sway=Math.sin(tt*0.5+s.y0*0.01)*4*(1-Math.min(1,s.y0/H));
+      var col=coralColor(s.depth,p);
+      ctx.strokeStyle='rgba('+col[0]+','+col[1]+','+col[2]+','+(0.9*treeFade)+')';
+      ctx.lineWidth=s.width*(0.35+0.65*p);
+      ctx.beginPath();ctx.moveTo(s.x0+sway,s.y0);ctx.lineTo(x1+sway,y1);ctx.stroke();
+    }
+    // glow pass
+    ctx.globalCompositeOperation='lighter';
+    for(var j=0;j<segs.length;j++){
+      var s2=segs[j];
+      var p2=(g*maxT-s2.t0)/s2.dur;
+      if(p2<=0||p2>0.995)continue;
+      var xg=s2.x0+(s2.x1-s2.x0)*p2, yg=s2.y0+(s2.y1-s2.y0)*p2;
+      var rg=ctx.createRadialGradient(xg,yg,0,xg,yg,s2.width*3.2);
+      rg.addColorStop(0,'rgba(255,150,220,'+(0.35*treeFade)+')');
+      rg.addColorStop(0.5,'rgba(120,240,235,'+(0.16*treeFade)+')');
+      rg.addColorStop(1,'rgba(120,240,235,0)');
+      ctx.fillStyle=rg;ctx.beginPath();ctx.arc(xg,yg,s2.width*3.2,0,6.2832);ctx.fill();
+    }
+    // terminal tip pulses
+    for(var k=0;k<tips.length;k++){
+      var tp=tips[k];
+      var pp=(g*maxT-tp.t)/1.6;
+      if(pp<=0)continue;if(pp>1)pp=1;
+      var pulse=0.6+0.4*Math.sin(tt*3+tp.x*0.05+tp.depth);
+      var rr=4+6*pp;
+      var rg2=ctx.createRadialGradient(tp.x,tp.y,0,tp.x,tp.y,rr*4);
+      rg2.addColorStop(0,'rgba(255,190,235,'+(0.5*pulse*treeFade)+')');
+      rg2.addColorStop(1,'rgba(255,120,210,0)');
+      ctx.fillStyle=rg2;ctx.beginPath();ctx.arc(tp.x,tp.y,rr*4,0,6.2832);ctx.fill();
+    }
+    ctx.globalCompositeOperation='source-over';
+
+    // vignette
+    var vg=ctx.createRadialGradient(W/2,H*0.5,H*0.25,W/2,H*0.5,H*1.0);
+    vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,0.6)');
+    ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);
+
+    requestAnimationFrame(frame);
+  }
+  resize();
+  window.addEventListener('resize',resize);
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

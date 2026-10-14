@@ -1,0 +1,96 @@
+<!-- Concept 53 · Glass Card — glassmorphism panel over an animated aurora background with pointer tilt -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Glass Card</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;400;700&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%}
+  body{background:#05060c;font-family:"Outfit",system-ui,sans-serif;color:#f6f7fb;
+    overflow:hidden;display:grid;place-items:center;perspective:1200px}
+  .aurora{position:fixed;inset:-20%;filter:blur(90px) saturate(160%);opacity:.95}
+  .aurora span{position:absolute;border-radius:50%;mix-blend-mode:screen}
+  .a1{width:60vmax;height:60vmax;left:-6%;top:-10%;
+    background:radial-gradient(circle,#7c3aed,transparent 62%);animation:float1 20s ease-in-out infinite alternate}
+  .a2{width:55vmax;height:55vmax;right:-8%;top:6%;
+    background:radial-gradient(circle,#06b6d4,transparent 62%);animation:float2 24s ease-in-out infinite alternate}
+  .a3{width:58vmax;height:58vmax;left:22%;bottom:-18%;
+    background:radial-gradient(circle,#f43f5e,transparent 62%);animation:float3 27s ease-in-out infinite alternate}
+  @keyframes float1{from{transform:translate(-6%,-4%) scale(1)}to{transform:translate(18%,14%) scale(1.3)}}
+  @keyframes float2{from{transform:translate(6%,4%) scale(1.2)}to{transform:translate(-16%,-10%) scale(.9)}}
+  @keyframes float3{from{transform:translate(-8%,8%) scale(.95)}to{transform:translate(12%,-16%) scale(1.25)}}
+  .grain{position:fixed;inset:0;pointer-events:none;opacity:.2;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>")}
+  .wrap{transform-style:preserve-3d;will-change:transform}
+  .card{
+    position:relative;width:min(88vw,420px);padding:2.4rem 2.2rem 2rem;border-radius:26px;
+    background:linear-gradient(150deg,rgba(255,255,255,.18),rgba(255,255,255,.06));
+    border:1px solid rgba(255,255,255,.28);
+    box-shadow:0 30px 80px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.45);
+    backdrop-filter:blur(22px) saturate(180%);-webkit-backdrop-filter:blur(22px) saturate(180%);
+    overflow:hidden;transition:box-shadow .4s ease;
+  }
+  .card::before{content:"";position:absolute;inset:0;border-radius:26px;pointer-events:none;
+    background:linear-gradient(115deg,rgba(255,255,255,.55) 0%,transparent 28%,transparent 72%,rgba(255,255,255,.28) 100%);
+    opacity:.5;mix-blend-mode:overlay}
+  .card .sheen{position:absolute;width:240px;height:240px;border-radius:50%;pointer-events:none;
+    background:radial-gradient(circle,rgba(255,255,255,.5),transparent 62%);
+    filter:blur(18px);left:0;top:0;transform:translate(-50%,-50%);opacity:.55}
+  .k{font-family:"Space Mono",monospace;font-size:.62rem;letter-spacing:.42em;text-transform:uppercase;
+    color:rgba(255,255,255,.72)}
+  h1{font-weight:200;font-size:clamp(1.9rem,7vw,2.9rem);line-height:1.02;margin:.7rem 0 .5rem;letter-spacing:-.01em}
+  h1 b{font-weight:700;display:block;background:linear-gradient(90deg,#fff,#b9c8ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+  p{font-size:.92rem;line-height:1.6;color:rgba(255,255,255,.78);max-width:34ch}
+  .row{display:flex;gap:.6rem;margin-top:1.6rem;flex-wrap:wrap}
+  .pill{border:1px solid rgba(255,255,255,.32);border-radius:999px;padding:.45rem .9rem;font-size:.72rem;
+    font-family:"Space Mono",monospace;letter-spacing:.1em;color:rgba(255,255,255,.85);
+    background:rgba(255,255,255,.08);transition:background .25s ease,transform .25s ease}
+  .pill:hover{background:rgba(255,255,255,.24);transform:translateY(-2px)}
+  .badge{position:fixed;bottom:1.1rem;left:1.1rem;z-index:20;font-family:"Space Mono",monospace;
+    font-size:.62rem;letter-spacing:.16em;text-transform:uppercase;
+    background:rgba(8,10,20,.4);border:1px solid rgba(255,255,255,.2);border-radius:999px;
+    padding:.5rem .85rem;backdrop-filter:blur(8px);color:rgba(255,255,255,.72)}
+  .badge a{color:#fff;text-decoration:none}
+  .badge a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+  <div class="aurora"><span class="a1"></span><span class="a2"></span><span class="a3"></span></div>
+  <div class="grain"></div>
+  <div class="wrap" id="wrap">
+    <div class="card" id="card">
+      <div class="sheen" id="sheen"></div>
+      <div class="k">Frosted · Layer 02</div>
+      <h1>Through the<br><b>Glass</b></h1>
+      <p>A translucent surface that borrows colour from everything drifting behind it. Move the pointer to tilt the pane.</p>
+      <div class="row">
+        <div class="pill">blur 22px</div>
+        <div class="pill">saturate 180%</div>
+        <div class="pill">blend · overlay</div>
+      </div>
+    </div>
+  </div>
+  <div class="badge">Glass Card &nbsp;·&nbsp; <a href="index.html">&larr; Gallery</a></div>
+  <script>
+    const wrap=document.getElementById('wrap'),card=document.getElementById('card'),sheen=document.getElementById('sheen');
+    let tx=0,ty=0,cx=0,cy=0,mx=.5,my=.5,smx=.5,smy=.5;
+    addEventListener('pointermove',e=>{
+      const r=card.getBoundingClientRect();
+      tx=((e.clientX-innerWidth/2)/innerWidth)*14;
+      ty=((e.clientY-innerHeight/2)/innerHeight)*-14;
+      mx=(e.clientX-r.left)/r.width; my=(e.clientY-r.top)/r.height;
+    },{passive:true});
+    (function loop(){
+      cx+=(tx-cx)*.08; cy+=(ty-cy)*.08; smx+=(mx-smx)*.12; smy+=(my-smy)*.12;
+      wrap.style.transform=`rotateY(${cx}deg) rotateX(${cy}deg)`;
+      sheen.style.left=(smx*100)+'%'; sheen.style.top=(smy*100)+'%';
+      requestAnimationFrame(loop);
+    })();
+  </script>
+</body>
+</html>

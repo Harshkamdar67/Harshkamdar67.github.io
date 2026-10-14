@@ -1,0 +1,100 @@
+<!-- DNA Helix - glowing double helix of spheres and rungs rotating in fog -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DNA Helix</title>
+<style>
+html,body{margin:0;height:100%;background:#03040c;overflow:hidden}
+#c{display:block;width:100vw;height:100vh}
+.badge{position:fixed;left:18px;bottom:16px;z-index:5;font:11px/1.5 ui-monospace,Menlo,monospace;
+letter-spacing:.16em;color:rgba(190,220,255,.55);text-transform:uppercase}
+.badge a{color:rgba(120,255,230,.9);text-decoration:none}
+.badge a:hover{color:#fff}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="badge">DNA Helix &middot; <a href="index.html">&larr; Gallery</a></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+"use strict";
+var scene=new THREE.Scene();
+scene.background=new THREE.Color(0x03040c);
+scene.fog=new THREE.FogExp2(0x03040c,0.022);
+var camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,0.1,200);
+var renderer=new THREE.WebGLRenderer({canvas:document.getElementById('c'),antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
+renderer.setSize(innerWidth,innerHeight);
+if(THREE.sRGBEncoding) renderer.outputEncoding=THREE.sRGBEncoding;
+
+scene.add(new THREE.AmbientLight(0x5566aa,0.7));
+var key=new THREE.DirectionalLight(0xffffff,1.2); key.position.set(5,10,8); scene.add(key);
+var rim=new THREE.DirectionalLight(0xff3fa0,0.9); rim.position.set(-8,-4,-6); scene.add(rim);
+
+function glowTex(){
+  var s=64,cv=document.createElement('canvas');cv.width=cv.height=s;
+  var g=cv.getContext('2d');
+  var gr=g.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2);
+  gr.addColorStop(0,'rgba(255,255,255,1)');
+  gr.addColorStop(0.35,'rgba(255,255,255,0.5)');
+  gr.addColorStop(1,'rgba(255,255,255,0)');
+  g.fillStyle=gr;g.fillRect(0,0,s,s);
+  return new THREE.CanvasTexture(cv);
+}
+var gtex=glowTex();
+
+var group=new THREE.Group(); scene.add(group);
+var TURNS=7,PER=22,TOTAL=TURNS*PER,RAD=3.0,H=24;
+var stepY=H/(TOTAL-1);
+var sphereGeo=new THREE.SphereGeometry(0.34,16,16);
+var rungGeo=new THREE.CylinderGeometry(0.075,0.075,2*RAD,8);
+var matA=new THREE.MeshStandardMaterial({color:0x1b6bff,emissive:0x1b6bff,emissiveIntensity:0.9,roughness:0.35,metalness:0.25});
+var matB=new THREE.MeshStandardMaterial({color:0xff2f9e,emissive:0xff2f9e,emissiveIntensity:0.9,roughness:0.35,metalness:0.25});
+var matR=new THREE.MeshStandardMaterial({color:0x9a6bff,emissive:0x6a3fff,emissiveIntensity:0.7,roughness:0.5,metalness:0.2});
+var up=new THREE.Vector3(0,1,0), dir=new THREE.Vector3(), q=new THREE.Quaternion();
+var gpos=[], gcol=[], cA=new THREE.Color(0x2f8bff), cB=new THREE.Color(0xff2f9e);
+for(var i=0;i<TOTAL;i++){
+  var ang=i/PER*Math.PI*2;
+  var y=-H/2+i*stepY;
+  var ax=Math.cos(ang)*RAD, az=Math.sin(ang)*RAD;
+  var bx=-ax, bz=-az;
+  var sA=new THREE.Mesh(sphereGeo,matA); sA.position.set(ax,y,az); group.add(sA);
+  var sB=new THREE.Mesh(sphereGeo,matB); sB.position.set(bx,y,bz); group.add(sB);
+  gpos.push(ax,y,az, bx,y,bz);
+  gcol.push(cA.r,cA.g,cA.b, cB.r,cB.g,cB.b);
+  var rung=new THREE.Mesh(rungGeo,matR);
+  dir.set(bx-ax,0,bz-az).normalize();
+  q.setFromUnitVectors(up,dir);
+  rung.quaternion.copy(q); rung.position.set(0,y,0);
+  group.add(rung);
+}
+var gg=new THREE.BufferGeometry();
+gg.setAttribute('position',new THREE.Float32BufferAttribute(gpos,3));
+gg.setAttribute('color',new THREE.Float32BufferAttribute(gcol,3));
+group.add(new THREE.Points(gg,new THREE.PointsMaterial({size:1.2,map:gtex,vertexColors:true,
+  transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,sizeAttenuation:true,opacity:0.95})));
+
+var mx=0,my=0,tx=0,ty=0;
+addEventListener('mousemove',function(e){mx=(e.clientX/innerWidth-0.5)*2;my=(e.clientY/innerHeight-0.5)*2;});
+addEventListener('resize',function(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+
+var clock=new THREE.Clock();
+function animate(){
+  requestAnimationFrame(animate);
+  var t=clock.getElapsedTime();
+  tx+=(mx-tx)*0.05; ty+=(my-ty)*0.05;
+  group.rotation.y=t*0.5;
+  var a=t*0.12+tx*0.6;
+  var rad=26;
+  camera.position.set(Math.sin(a)*rad,Math.sin(t*0.4)*2-ty*8,Math.cos(a)*rad);
+  camera.lookAt(0,0,0);
+  renderer.render(scene,camera);
+}
+animate();
+})();
+</script>
+</body>
+</html>

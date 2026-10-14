@@ -1,0 +1,139 @@
+<!-- Concept: Matrix Digital Rain -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Matrix Rain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{ --ink:#7bffb0; }
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  html,body{ width:100%; height:100%; overflow:hidden; background:#000; }
+  canvas{ display:block; width:100vw; height:100vh; }
+  #vig{
+    position:fixed; inset:0; pointer-events:none; z-index:2;
+    background:radial-gradient(ellipse at 50% 40%, rgba(0,0,0,0) 40%, rgba(0,0,0,.55) 100%);
+    mix-blend-mode:multiply;
+  }
+  .badge{
+    position:fixed; left:14px; bottom:12px; z-index:5;
+    font-family:'Share Tech Mono', monospace; font-size:11px; letter-spacing:.12em;
+    color:rgba(120,255,170,.62); text-transform:uppercase;
+    background:rgba(0,18,8,.35); border:1px solid rgba(120,255,170,.22);
+    padding:6px 10px; border-radius:4px; backdrop-filter:blur(3px);
+    user-select:none;
+  }
+  .badge a{ color:rgba(160,255,200,.85); text-decoration:none; }
+  .badge a:hover{ text-shadow:0 0 8px rgba(120,255,170,.9); }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="vig"></div>
+<div class="badge">Matrix Rain &nbsp;<a href="index.html">&larr; Gallery</a></div>
+<script>
+(function(){
+  const cv = document.getElementById('c');
+  const ctx = cv.getContext('2d', { alpha:false });
+  const glyphs = "アカサタナハマヤラワイキシチニヒミリウクスツヌフムユルエケセテネヘメレオコソトノホモヨロ0123456789ABCDEFXZ$#*+=";
+  const chars = glyphs.split('');
+  let W=0, H=0, dpr=1, fs=18, cols=0, drops=[], speeds=[], bright=[];
+  const headColor = '#e8fff0';
+  const midColor = '#4dff88';
+  const trailColor = '#0a2b16';
+
+  function rand(a,b){ return a + Math.random()*(b-a); }
+
+  function setup(){
+    dpr = Math.min(window.devicePixelRatio||1, 2);
+    W = Math.floor(window.innerWidth);
+    H = Math.floor(window.innerHeight);
+    cv.width = Math.floor(W*dpr);
+    cv.height = Math.floor(H*dpr);
+    cv.style.width = W+'px';
+    cv.style.height = H+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+
+    fs = W < 700 ? 14 : 18;
+    cols = Math.ceil(W/fs);
+    const rows = Math.ceil(H/fs);
+    drops = new Array(cols);
+    speeds = new Array(cols);
+    bright = new Array(cols);
+    for(let i=0;i<cols;i++){
+      // spread across the whole height so the rain reads instantly
+      drops[i] = Math.floor(rand(-rows*0.15, rows));
+      speeds[i] = rand(0.5, 1.7);
+      bright[i] = 0;
+    }
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0,0,W,H);
+  }
+
+  let mouseX = -9999, mouseY = -9999, mouseActive=false;
+  window.addEventListener('mousemove', e=>{ mouseX=e.clientX; mouseY=e.clientY; mouseActive=true; });
+  window.addEventListener('mouseleave', ()=>{ mouseActive=false; });
+  window.addEventListener('touchmove', e=>{ if(e.touches[0]){ mouseX=e.touches[0].clientX; mouseY=e.touches[0].clientY; mouseActive=true; } }, {passive:true});
+  window.addEventListener('resize', setup);
+
+  ctx.font = fs+'px "Share Tech Mono", monospace';
+  ctx.textBaseline = 'top';
+
+  let last = performance.now(), acc = 0;
+  const STEP = 1000/30; // glyph advance ~30fps for that classic cadence
+
+  function draw(now){
+    const dt = Math.min(now-last, 80); last = now;
+    acc += dt;
+
+    // fade toward black (motion trails)
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = 'rgba(0,0,0,0.075)';
+    ctx.fillRect(0,0,W,H);
+
+    ctx.font = fs+'px "Share Tech Mono", monospace';
+    ctx.globalCompositeOperation = 'lighter';
+
+    if(acc >= STEP){
+      acc = 0;
+      for(let i=0;i<cols;i++){
+        const x = i*fs;
+        const y = drops[i]*fs;
+        // trailing glyph
+        ctx.fillStyle = trailColor;
+        ctx.fillText(chars[(i*7 + (drops[i]|0)) % chars.length], x, y - fs*2);
+
+        // head glyph
+        let col = midColor;
+        if(mouseActive && Math.abs(mouseX - (x+fs/2)) < 60 && Math.abs(mouseY - y) < 120){
+          col = headColor;
+        }
+        ctx.shadowColor = 'rgba(80,255,140,0.9)';
+        ctx.shadowBlur = 12;
+        ctx.fillStyle = col;
+        ctx.fillText(chars[(Math.random()*chars.length)|0], x, y);
+        ctx.shadowBlur = 0;
+
+        // advance
+        drops[i] += speeds[i];
+        if(y > H && Math.random() > 0.975){
+          drops[i] = Math.floor(rand(-30,-1));
+          speeds[i] = rand(0.5,1.6);
+        }
+      }
+    }
+
+    // a few bright "spark" heads for depth
+    ctx.shadowBlur = 0;
+    requestAnimationFrame(draw);
+  }
+
+  setup();
+  requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,115 @@
+<!-- Infinite Cubes - endless wireframe cube tunnel with a mirrored floor reflection -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Infinite Cubes</title>
+<style>
+html,body{margin:0;height:100%;background:#03000a;overflow:hidden}
+#c{display:block;width:100vw;height:100vh}
+.badge{position:fixed;left:18px;bottom:16px;z-index:5;font:11px/1.5 ui-monospace,Menlo,monospace;
+letter-spacing:.16em;color:rgba(220,205,255,.55);text-transform:uppercase}
+.badge a{color:rgba(180,140,255,.95);text-decoration:none}
+.badge a:hover{color:#fff}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="badge">Infinite Cubes &middot; <a href="index.html">&larr; Gallery</a></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+"use strict";
+var scene=new THREE.Scene();
+scene.background=new THREE.Color(0x03000a);
+scene.fog=new THREE.FogExp2(0x03000a,0.028);
+var camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.1,600);
+camera.position.set(0,3,0);
+var renderer=new THREE.WebGLRenderer({canvas:document.getElementById('c'),antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
+renderer.setSize(innerWidth,innerHeight);
+if(THREE.sRGBEncoding) renderer.outputEncoding=THREE.sRGBEncoding;
+
+var tunnel=new THREE.Group(); scene.add(tunnel);
+var mirror=new THREE.Group(); mirror.scale.y=-1; scene.add(mirror);
+
+var N=46, SPACING=7.2, TOTAL=N*SPACING;
+var edgeGeo=new THREE.EdgesGeometry(new THREE.BoxGeometry(1,1,1));
+var cubes=[], mirrors=[];
+for(var i=0;i<N;i++){
+  var hue=(i*0.037)%1;
+  var col=new THREE.Color().setHSL(hue,0.9,0.58);
+  var c=new THREE.LineSegments(edgeGeo,new THREE.LineBasicMaterial({color:col,transparent:true,
+    opacity:0.95,blending:THREE.AdditiveBlending,depthWrite:false}));
+  var s=0.6+Math.random()*2.3;
+  c.scale.setScalar(s);
+  c.position.set((Math.random()-0.5)*3.4, 3+(Math.random()-0.5)*3.4, -i*SPACING);
+  c.rotation.set(Math.random()*0.6,Math.random()*0.6,Math.random()*0.6);
+  tunnel.add(c); cubes.push(c);
+
+  var mc=new THREE.LineSegments(edgeGeo,new THREE.LineBasicMaterial({color:col,transparent:true,
+    opacity:0.2,blending:THREE.AdditiveBlending,depthWrite:false}));
+  mc.scale.copy(c.scale); mc.position.copy(c.position); mc.rotation.copy(c.rotation);
+  mirror.add(mc); mirrors.push(mc);
+}
+
+function floorTex(){
+  var s=512,cv=document.createElement('canvas');cv.width=cv.height=s;
+  var g=cv.getContext('2d');
+  var gr=g.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2);
+  gr.addColorStop(0,'rgba(10,4,26,0.92)');
+  gr.addColorStop(0.55,'rgba(10,4,26,0.55)');
+  gr.addColorStop(1,'rgba(10,4,26,0)');
+  g.fillStyle=gr;g.fillRect(0,0,s,s);
+  return new THREE.CanvasTexture(cv);
+}
+var floor=new THREE.Mesh(new THREE.PlaneGeometry(120,120),
+  new THREE.MeshBasicMaterial({map:floorTex(),transparent:true,depthWrite:false}));
+floor.rotation.x=-Math.PI/2; scene.add(floor);
+
+function glowTex(){
+  var s=128,cv=document.createElement('canvas');cv.width=cv.height=s;
+  var g=cv.getContext('2d');
+  var gr=g.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2);
+  gr.addColorStop(0,'rgba(220,190,255,0.9)');
+  gr.addColorStop(0.4,'rgba(150,110,255,0.35)');
+  gr.addColorStop(1,'rgba(0,0,0,0)');
+  g.fillStyle=gr;g.fillRect(0,0,s,s);
+  return new THREE.CanvasTexture(cv);
+}
+var light=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex(),transparent:true,
+  blending:THREE.AdditiveBlending,depthWrite:false,fog:false}));
+light.scale.set(24,24,1); light.position.set(0,3,-260); scene.add(light);
+
+var mx=0,my=0,tx=0,ty=0;
+addEventListener('mousemove',function(e){mx=(e.clientX/innerWidth-0.5)*2;my=(e.clientY/innerHeight-0.5)*2;});
+addEventListener('resize',function(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+
+var clock=new THREE.Clock(), speed=34;
+function animate(){
+  requestAnimationFrame(animate);
+  var dt=Math.min(clock.getDelta(),0.05);
+  var t=clock.getElapsedTime();
+  tx+=(mx-tx)*0.05; ty+=(my-ty)*0.05;
+  for(var i=0;i<N;i++){
+    var c=cubes[i];
+    c.position.z+=speed*dt;
+    if(c.position.z>16) c.position.z-=TOTAL;
+    c.rotation.y+=dt*0.18;
+    c.rotation.x+=dt*0.1;
+    var m=mirrors[i];
+    m.position.z=c.position.z;
+    m.rotation.y=c.rotation.y;
+    m.rotation.x=c.rotation.x;
+  }
+  camera.position.x=tx*1.6;
+  camera.position.y=3-ty*1.6+Math.sin(t*0.8)*0.15;
+  camera.lookAt(tx*1.2,3,-60);
+  renderer.render(scene,camera);
+}
+animate();
+})();
+</script>
+</body>
+</html>

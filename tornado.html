@@ -1,0 +1,145 @@
+<!-- Tornado — a funnel of dust particles spiralling from storm cloud to ground -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tornado</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500&display=swap" rel="stylesheet">
+<style>
+  html,body{margin:0;height:100%;background:#000;overflow:hidden;}
+  #c{display:block;width:100vw;height:100vh;}
+  .badge{position:fixed;left:16px;bottom:14px;z-index:9;font-family:'Inter',system-ui,sans-serif;
+    font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:rgba(235,225,210,.5);
+    background:rgba(16,14,12,.32);border:1px solid rgba(220,200,170,.12);border-radius:999px;
+    padding:6px 12px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:color .4s,border-color .4s;}
+  .badge:hover{color:rgba(255,245,230,.92);border-color:rgba(220,200,170,.32);}
+  .badge a{color:inherit;text-decoration:none;}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="badge">Tornado&nbsp; ·&nbsp; <a href="index.html">&larr; Gallery</a></div>
+<script>
+(function(){
+  var canvas=document.getElementById('c');
+  var ctx=canvas.getContext('2d');
+  var W=0,H=0,dpr=Math.min(window.devicePixelRatio||1,2);
+  var sky=document.createElement('canvas'), skyx=sky.getContext('2d');
+
+  var N=1100;
+  var P=[];
+  function initParticles(){
+    P=[];
+    for(var i=0;i<N;i++){
+      P.push({
+        a:Math.random()*6.2832,
+        r:Math.pow(Math.random(),0.7),
+        y:Math.random(),
+        sp:0.6+Math.random()*1.1,
+        sz:0.6+Math.random()*1.8,
+        px:0,py:0,has:false
+      });
+    }
+  }
+
+  function resize(){
+    W=window.innerWidth;H=window.innerHeight;
+    canvas.width=Math.floor(W*dpr);canvas.height=Math.floor(H*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    buildSky();
+  }
+  function buildSky(){
+    sky.width=Math.floor(W*dpr);sky.height=Math.floor(H*dpr);
+    skyx.setTransform(dpr,0,0,dpr,0,0);
+    var g=skyx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,'#0a0d15');
+    g.addColorStop(0.4,'#141822');
+    g.addColorStop(0.75,'#20222a');
+    g.addColorStop(1,'#2a2620');
+    skyx.fillStyle=g;skyx.fillRect(0,0,W,H);
+    for(var i=0;i<30;i++){
+      var cx=Math.random()*W, cy=H*(0.05+Math.random()*0.4);
+      var r=H*(0.1+Math.random()*0.24);
+      var rg=skyx.createRadialGradient(cx,cy,0,cx,cy,r);
+      var a=0.05+Math.random()*0.07;
+      rg.addColorStop(0,'rgba(40,42,52,'+a+')');
+      rg.addColorStop(1,'rgba(40,42,52,0)');
+      skyx.fillStyle=rg;skyx.beginPath();skyx.arc(cx,cy,r,0,6.2832);skyx.fill();
+    }
+  }
+
+  var mx=0.5,tmx=0.5,last=performance.now(),tt=0;
+  window.addEventListener('mousemove',function(e){tmx=e.clientX/window.innerWidth;});
+  window.addEventListener('touchmove',function(e){if(e.touches[0])tmx=e.touches[0].clientX/window.innerWidth;},{passive:true});
+
+  function frame(now){
+    var dt=Math.min(0.05,(now-last)/1000);last=now;tt+=dt;
+    mx+=(tmx-mx)*0.04;
+
+    ctx.globalCompositeOperation='source-over';
+    ctx.drawImage(sky,0,0,W,H);
+    ctx.globalCompositeOperation='lighter';
+
+    var cx=(0.5+(mx-0.5)*0.35)*W;
+    var groundY=H*0.94, cloudY=H*0.06;
+    var topR=W*0.30, botR=W*0.02;
+
+    for(var i=0;i<N;i++){
+      var p=P[i];
+      // funnel radius: narrow at ground, wide at cloud
+      var rr=botR+(topR-botR)*Math.pow(p.y,1.6);
+      var R=rr*(0.55+p.r*0.75);
+      // angular speed: faster near core (vortex)
+      p.a+=dt*p.sp*(1.2+2.2/(0.25+p.r*2.2));
+      // lift
+      p.y+=dt*(0.05+p.r*0.09)*(0.6+p.sp*0.5);
+      if(p.y>1.02){p.y=-0.02;p.a=Math.random()*6.2832;p.r=Math.pow(Math.random(),0.7);p.has=false;}
+
+      var swx=Math.sin(p.a)*R;
+      var x=cx+swx;
+      var y=groundY-(groundY-cloudY)*p.y;
+      // vertical wobble
+      y+=Math.sin(tt*2.0+p.a)*H*0.006;
+
+      var depth=0.5+0.5*Math.cos(p.a); // front/back shading
+      var alpha=(0.12+0.34*depth)*(1.0-p.y*0.30);
+
+      if(p.has){
+        ctx.strokeStyle='rgba('+(190+60*depth|0)+','+(178+50*depth|0)+','+(160+40*depth|0)+','+alpha+')';
+        ctx.lineWidth=p.sz*(0.9+depth*1.3);
+        ctx.beginPath();ctx.moveTo(p.px,p.py);ctx.lineTo(x,y);ctx.stroke();
+      }
+      p.px=x;p.py=y;p.has=true;
+    }
+
+    // ground dust swirl
+    var dg=ctx.createRadialGradient(cx,groundY,0,cx,groundY,W*0.35);
+    dg.addColorStop(0,'rgba(150,130,100,0.22)');
+    dg.addColorStop(1,'rgba(150,130,100,0)');
+    ctx.fillStyle=dg;
+    ctx.beginPath();ctx.ellipse(cx,groundY,W*0.35,H*0.06,0,0,6.2832);ctx.fill();
+
+    // cloud base glow
+    var cg=ctx.createRadialGradient(cx,cloudY,0,cx,cloudY,W*0.5);
+    cg.addColorStop(0,'rgba(70,75,90,0.28)');
+    cg.addColorStop(1,'rgba(70,75,90,0)');
+    ctx.fillStyle=cg;
+    ctx.beginPath();ctx.ellipse(cx,cloudY,W*0.5,H*0.12,0,0,6.2832);ctx.fill();
+
+    ctx.globalCompositeOperation='source-over';
+    // vignette
+    var vg=ctx.createRadialGradient(W/2,H/2,H*0.3,W/2,H/2,H*0.95);
+    vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,0.55)');
+    ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);
+
+    requestAnimationFrame(frame);
+  }
+  resize();initParticles();
+  window.addEventListener('resize',resize);
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

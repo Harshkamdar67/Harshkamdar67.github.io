@@ -1,0 +1,170 @@
+<!-- Rain Glass — raindrops sliding down a pane, magnifying and streaking a blurred night scene -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rain Glass</title>
+<style>
+:root{color-scheme:dark}
+html,body{margin:0;height:100%;background:#02040a;overflow:hidden}
+canvas{display:block;width:100vw;height:100vh}
+.badge{position:fixed;left:14px;bottom:14px;z-index:9;font:12px/1.35 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  color:rgba(255,255,255,.5);background:rgba(8,12,24,.35);border:1px solid rgba(255,255,255,.1);
+  padding:6px 11px;border-radius:999px;backdrop-filter:blur(8px);letter-spacing:.03em}
+.badge a{color:rgba(190,220,255,.9);text-decoration:none}
+.badge a:hover{color:#fff}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="badge">Rain Glass &middot; <a href="index.html">&larr; Gallery</a></div>
+<script>
+(()=>{
+const c=document.getElementById('c');
+const ctx=c.getContext('2d',{alpha:false});
+let W=0,H=0,DPR=1;
+let scene,sceneCtx;
+
+// blurred night scene: gradient sky + bokeh city lights
+function buildScene(){
+  scene=document.createElement('canvas');
+  scene.width=Math.floor(W*DPR);scene.height=Math.floor(H*DPR);
+  sceneCtx=scene.getContext('2d');
+  const g=sceneCtx;
+  g.setTransform(DPR,0,0,DPR,0,0);
+  const bg=g.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0,'#050a1c');bg.addColorStop(0.5,'#0a1330');bg.addColorStop(1,'#04060f');
+  g.fillStyle=bg;g.fillRect(0,0,W,H);
+  // far bokeh lights
+  const cols=['#ffb46b','#ff6f91','#6bd3ff','#b58cff','#ffe27a','#7affc9'];
+  for(let i=0;i<70;i++){
+    const x=Math.random()*W,y=H*0.35+Math.random()*H*0.65;
+    const r=8+Math.random()*46;
+    const col=cols[(Math.random()*cols.length)|0];
+    const rg=g.createRadialGradient(x,y,0,x,y,r);
+    rg.addColorStop(0,hexA(col,0.55));
+    rg.addColorStop(1,hexA(col,0));
+    g.fillStyle=rg;g.beginPath();g.arc(x,y,r,0,6.283);g.fill();
+  }
+  // a few building silhouettes
+  g.fillStyle='rgba(2,4,10,0.9)';
+  for(let x=-20;x<W+20;){
+    const bw=40+Math.random()*90,bh=H*(0.12+Math.random()*0.3);
+    g.fillRect(x,H-bh,bw,bh);
+    x+=bw+6+Math.random()*20;
+  }
+  // soften the whole scene
+  const tmp=document.createElement('canvas');tmp.width=scene.width;tmp.height=scene.height;
+  const tc=tmp.getContext('2d');
+  tc.filter='blur(10px)';
+  tc.drawImage(scene,0,0);
+  g.setTransform(1,0,0,1,0,0);
+  g.filter='none';
+  g.clearRect(0,0,scene.width,scene.height);
+  g.drawImage(tmp,0,0);
+}
+function hexA(hex,a){
+  const n=parseInt(hex.slice(1),16);
+  return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')';
+}
+
+const drops=[];
+function newDrop(x,y){
+  return {
+    x:x!==undefined?x:Math.random()*W,
+    y:y!==undefined?y:-Math.random()*H,
+    w:6+Math.random()*16,
+    h:14+Math.random()*46,
+    v:0.2+Math.random()*0.8,
+    drift:(Math.random()-0.5)*0.15,
+    life:200+Math.random()*600,
+    wob:Math.random()*6.283
+  };
+}
+
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1,2);
+  W=window.innerWidth;H=window.innerHeight;
+  c.width=Math.floor(W*DPR);c.height=Math.floor(H*DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  buildScene();
+  drops.length=0;
+  const n=Math.floor(W*H/9000);
+  for(let i=0;i<n;i++){const d=newDrop();d.y=Math.random()*H;drops.push(d);}
+}
+addEventListener('resize',resize);resize();
+
+addEventListener('pointerdown',e=>{
+  for(let i=0;i<10;i++)drops.push(newDrop(e.clientX+(Math.random()-0.5)*60,e.clientY+(Math.random()-0.5)*60));
+});
+addEventListener('pointermove',e=>{
+  if(Math.random()<0.06)drops.push(newDrop(e.clientX+(Math.random()-0.5)*40,e.clientY+(Math.random()-0.5)*40));
+});
+
+function frame(){
+  ctx.drawImage(scene,0,0,W,H);
+
+  // streaks behind drops (vertical smears)
+  ctx.globalCompositeOperation='lighter';
+  for(let i=0;i<drops.length;i++){
+    const d=drops[i];
+    const sg=ctx.createLinearGradient(d.x,d.y-d.h*4,d.x,d.y);
+    sg.addColorStop(0,'rgba(200,225,255,0)');
+    sg.addColorStop(1,'rgba(200,225,255,0.06)');
+    ctx.fillStyle=sg;
+    ctx.fillRect(d.x-d.w*0.35,d.y-d.h*4,d.w*0.7,d.h*4);
+  }
+  ctx.globalCompositeOperation='source-over';
+
+  // refractive lens for each drop
+  for(let i=0;i<drops.length;i++){
+    const d=drops[i];
+    const m=1.45;
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(d.x,d.y,d.w*0.5,d.h*0.5,0,0,6.283);
+    ctx.clip();
+    ctx.drawImage(scene,
+      (d.x-d.w*m)*DPR,(d.y-d.h*m)*DPR,(d.w*2*m)*DPR,(d.h*2*m)*DPR,
+      d.x-d.w,d.y-d.h,d.w*2,d.h*2);
+    // brighten the lens
+    const lg=ctx.createRadialGradient(d.x-d.w*0.2,d.y-d.h*0.3,0,d.x,d.y,d.h*0.7);
+    lg.addColorStop(0,'rgba(255,255,255,0.35)');
+    lg.addColorStop(0.5,'rgba(220,240,255,0.08)');
+    lg.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle=lg;
+    ctx.fillRect(d.x-d.w,d.y-d.h,d.w*2,d.h*2);
+    ctx.restore();
+    // specular highlight
+    ctx.fillStyle='rgba(255,255,255,0.5)';
+    ctx.beginPath();
+    ctx.ellipse(d.x-d.w*0.16,d.y-d.h*0.22,d.w*0.12,d.h*0.12,0,0,6.283);
+    ctx.fill();
+  }
+
+  // physics
+  for(let i=drops.length-1;i>=0;i--){
+    const d=drops[i];
+    d.v+=0.012;
+    d.wob+=0.05;
+    d.y+=d.v*(1+Math.sin(d.wob)*0.15);
+    d.x+=d.drift;
+    d.life--;
+    if(d.life<=0||d.y>H+60){drops.splice(i,1);}
+  }
+  // replenish
+  while(drops.length<Math.floor(W*H/9000)){drops.push(newDrop());}
+
+  // vignette + faint glass tint
+  const vg=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*0.3,W/2,H/2,Math.max(W,H)*0.75);
+  vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,0.55)');
+  ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);
+
+  requestAnimationFrame(frame);
+}
+frame();
+})();
+</script>
+</body>
+</html>
